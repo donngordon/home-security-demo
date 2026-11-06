@@ -119,6 +119,13 @@
   .door .how { color: var(--haze); font-size: 15px; margin-top: 2px; }
   .door .when { color: var(--haze); font-size: 13px; margin-top: 10px; opacity: .8; }
 
+  .doors { display: grid; gap: 22px; }
+  .door.compact { gap: 18px; }
+  .door.compact .dial { width: 104px; height: 104px; }
+  .door.compact .dial svg { width: 36px; height: 36px; }
+  .door.compact .what { font-size: 29px; }
+  .door .name { font-weight: 600; font-size: 15px; color: var(--paper); margin-bottom: 2px; }
+
   /* ---------------- cameras ---------------- */
   .cams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .cams.one { grid-template-columns: 1fr; }
@@ -320,20 +327,8 @@
     </section>
 
     <section class="block">
-      <h2>Front door</h2>
-      <div class="door">
-        <button class="dial" id="dial" aria-describedby="doorHow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="4" y="11" width="16" height="10" rx="2.5"/>
-            <path id="shackle" d="M8 11V7a4 4 0 0 1 8 0v4"/>
-          </svg>
-        </button>
-        <div>
-          <div class="what" id="lockText">…</div>
-          <div class="how" id="doorHow"></div>
-          <div class="when" id="lockSub"></div>
-        </div>
-      </div>
+      <div class="lights-head"><h2>Doors</h2><button class="ghost" id="lockAll">Lock all</button></div>
+      <div class="doors" id="doors"></div>
     </section>
 
     <section class="block" id="garageBlock">
@@ -445,7 +440,13 @@ const CONFIG = {
   // Leave null when this page is served by Home Assistant (/local/security.html).
   hassUrl: null,
   alarm: "alarm_control_panel.home_security",
-  lock: "lock.front_door",
+  // Every door with a smart lock. Hold a lock 2 seconds to unlock it, tap to lock it.
+  locks: [
+    { id: "lock.front_door",        label: "Front door",             sensor: "binary_sensor.front_door" },
+    { id: "lock.garage_entry_door", label: "Garage door to hallway", sensor: "binary_sensor.garage_entry_door" },
+    { id: "lock.back_door",         label: "Back door",              sensor: "binary_sensor.back_door" },
+  ],
+  responderLock: "lock.front_door",  // the door the alarm screen offers to unlock for responders
   garage: "cover.garage_door",       // set to null if you have no garage opener
   cameras: [                         // remove lines you don't need, add more as needed
     { id: "camera.front_porch", label: "Front porch" },
@@ -484,6 +485,8 @@ const minsAgo=(m)=>new Date(Date.now()-m*60000).toISOString();
 let ents={
  "alarm_control_panel.home_security":{state:"disarmed",attributes:{}},
  "lock.front_door":{state:"locked",last_changed:minsAgo(4),attributes:{}},
+ "lock.garage_entry_door":{state:"locked",last_changed:minsAgo(95),attributes:{}},
+ "lock.back_door":{state:"unlocked",last_changed:minsAgo(12),attributes:{}},
  "cover.garage_door":{state:"closed",last_changed:minsAgo(180),attributes:{}},
  "binary_sensor.front_door":{state:"off",attributes:{device_class:"door"}},
  "binary_sensor.back_door":{state:"off",attributes:{device_class:"door"}},
@@ -508,7 +511,8 @@ async function callService(conn,domain,service,data={},target={}){
   if(k==="alarm_control_panel.alarm_arm_home") setS(AL,"armed_home");
   else if(k==="alarm_control_panel.alarm_arm_away"){ setS(AL,"arming"); if(ents["cover.garage_door"].state==="open"){setS("cover.garage_door","closing");later(3000,()=>setS("cover.garage_door","closed"))} later(5000,()=>ents[AL].state==="arming"&&setS(AL,"armed_away")); }
   else if(k==="alarm_control_panel.alarm_disarm"){ if(data.code!=="1234") throw {message:"Wrong code. In this demo the code is 1234."}; timers.forEach(clearTimeout); timers=[]; setS(AL,"disarmed"); ["binary_sensor.garage_entry_door","binary_sensor.hallway_motion"].forEach(i=>setS(i,"off")); }
-  else if(k==="lock.lock"){ setS("lock.front_door","locking"); later(1500,()=>setS("lock.front_door","locked")); }
+  else if(k==="lock.lock"){ [].concat(target.entity_id).forEach(id=>{ if(ents[id].state!=="locked"){ setS(id,"locking"); later(1500,()=>setS(id,"locked")); } }); }
+  else if(k==="lock.unlock"){ [].concat(target.entity_id).forEach(id=>{ setS(id,"unlocking"); later(1500,()=>setS(id,"unlocked")); }); }
   else if(k==="script.security_unlock_for_responders"){ setS("lock.front_door","unlocking"); later(1500,()=>setS("lock.front_door","unlocked")); }
   else if(domain==="light"){ [].concat(target.entity_id).forEach(id=>{ ents[id]={...ents[id],state:service==="turn_on"?"on":"off",attributes:service==="turn_on"?{brightness:255}:{}}; }); push(); }
   else if(k==="climate.set_temperature"){ const c=ents["climate.thermostat"],a={...c.attributes,temperature:data.temperature};
@@ -610,16 +614,24 @@ function render() {
   $("modeHome").disabled = $("modeAway").disabled = !off;
   $("modeOff").disabled = off || offline;
 
-  // Front door
-  const l = entities[CONFIG.lock], ls = l?.state || "unavailable";
-  const locked = ls === "locked";
-  $("dial").classList.toggle("locked", locked);
-  $("dial").disabled = !["locked", "unlocked", "open"].includes(ls);
-  $("shackle").setAttribute("d", locked ? "M8 11V7a4 4 0 0 1 8 0v4" : "M8 11V7a4 4 0 0 1 7.5-1.8");
-  $("lockText").textContent = { locked: "Locked", unlocked: "Unlocked", open: "Open", locking: "Locking…", unlocking: "Unlocking…", jammed: "Jammed" }[ls] || "Offline";
-  $("doorHow").textContent = locked ? "Hold the lock for 2 seconds to let responders in." : ls === "jammed" ? "Check the door by hand." : $("dial").disabled ? "The lock isn't responding." : "Tap the lock to lock it.";
-  $("dial").setAttribute("aria-label", locked ? "Hold to unlock the front door" : "Lock the front door");
-  $("lockSub").textContent = l ? "Changed " + ago(l.last_changed) : "";
+  // Doors
+  let responderLocked = false;
+  CONFIG.locks.forEach((d, i) => {
+    const l = entities[d.id], ls = l?.state || "unavailable", locked = ls === "locked", dial = $("lockDial" + i);
+    if (!dial) return;
+    if (d.id === CONFIG.responderLock) responderLocked = locked;
+    dial.classList.toggle("locked", locked);
+    dial.disabled = !["locked", "unlocked", "open"].includes(ls);
+    $("shackle" + i).setAttribute("d", locked ? "M8 11V7a4 4 0 0 1 8 0v4" : "M8 11V7a4 4 0 0 1 7.5-1.8");
+    $("lockText" + i).textContent = { locked: "Locked", unlocked: "Unlocked", open: "Open", locking: "Locking…", unlocking: "Unlocking…", jammed: "Jammed" }[ls] || "Offline";
+    $("lockHow" + i).textContent = locked ? "Hold for 2 seconds to unlock." : ls === "jammed" ? "Check the door by hand." : dial.disabled ? "The lock isn't responding." : "Tap to lock.";
+    dial.setAttribute("aria-label", (locked ? "Hold to unlock " : "Lock ") + d.label);
+    const sens = d.sensor ? entities[d.sensor] : null, ajar = sens?.state === "on";
+    if (ajar && !locked) $("lockHow" + i).textContent = "The door is open. Close it, then tap to lock.";
+    $("lockSub" + i).textContent = (sens ? (ajar ? "Door is open. " : "Door is closed. ") : "") + (l ? "Changed " + ago(l.last_changed) : "");
+    $("lockSub" + i).style.color = ajar ? "var(--flare)" : "";
+  });
+  $("lockAll").disabled = !CONFIG.locks.some((d) => entities[d.id]?.state === "unlocked" || entities[d.id]?.state === "open");
 
   // Garage
   if (CONFIG.garage) {
@@ -660,7 +672,7 @@ function render() {
   // First render after sign-in: offer to unlock if the alarm is going off.
   if (!alarmPromptShown && entities[CONFIG.alarm]) {
     alarmPromptShown = true;
-    if (st === "triggered" && locked) $("alarmDlg").showModal();
+    if (st === "triggered" && responderLocked) $("alarmDlg").showModal();
   }
 }
 
@@ -689,11 +701,27 @@ $("modeOff").onclick = async () => {
 const unlockForResponders = () =>
   run("Front door unlocked for responders", "script", "security_unlock_for_responders", { requested_by: userName });
 
-// The dial: tap to lock when unlocked, hold to unlock when locked.
-holdable($("dial"), unlockForResponders, () => $("dial").classList.contains("locked"));
-$("dial").addEventListener("click", () => {
-  if (!$("dial").classList.contains("locked")) run("Front door locked", "lock", "lock", {}, { entity_id: CONFIG.lock });
+// Doors: one dial per lock. Hold to unlock when locked, tap to lock when unlocked.
+const LOCK_ICON = (i) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <rect x="4" y="11" width="16" height="10" rx="2.5"/><path id="shackle${i}" d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
+$("doors").innerHTML = CONFIG.locks.map((d, i) =>
+  `<div class="door compact">
+     <button class="dial" id="lockDial${i}">${LOCK_ICON(i)}</button>
+     <div>
+       <div class="name">${escapeHtml(d.label)}</div>
+       <div class="what" id="lockText${i}">…</div>
+       <div class="how" id="lockHow${i}"></div>
+       <div class="when" id="lockSub${i}"></div>
+     </div>
+   </div>`).join("");
+CONFIG.locks.forEach((d, i) => {
+  const dial = $("lockDial" + i);
+  holdable(dial, () => run(`${d.label} unlocked`, "lock", "unlock", {}, { entity_id: d.id }), () => dial.classList.contains("locked"));
+  dial.addEventListener("click", () => {
+    if (!dial.classList.contains("locked") && !dial.disabled) run(`${d.label} locked`, "lock", "lock", {}, { entity_id: d.id });
+  });
 });
+$("lockAll").onclick = () => run("Locking all doors", "lock", "lock", {}, { entity_id: CONFIG.locks.map((d) => d.id) });
 holdable($("alarmDial"), async () => { $("alarmDlg").close(); await unlockForResponders(); });
 $("alarmLater").onclick = () => $("alarmDlg").close();
 
