@@ -565,7 +565,7 @@ async function connect(interactive) {
     $("app").classList.remove("hidden");
     conn.addEventListener("disconnected", () => ($("conn").textContent = "Connection lost. Reconnecting…"));
     conn.addEventListener("ready", () => ($("conn").textContent = ""));
-    subscribeEntities(conn, (ents) => { const first = !Object.keys(entities).length; entities = ents; render(); if (first) refreshCams(); watchDoors(first); });
+    subscribeEntities(conn, (ents) => { const first = !Object.keys(entities).length; entities = ents; render(); if (first) refreshCams(); watchDoors(first); watchAlarm(); });
   } catch (err) {
     store.save(null);
     $("loginMsg").textContent =
@@ -676,7 +676,37 @@ function render() {
   }
 }
 
-/* ---------------- vibrate when a door or window opens ---------------- */
+/* ---------------- sound (made in the browser, no files needed) ---------------- */
+let audio = null;
+function unlockAudio() {                    // phones only allow sound after a tap
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); } catch {}
+}
+addEventListener("pointerdown", unlockAudio, { passive: true });
+function tone(freq, start, len, vol = 0.25, type = "sine") {
+  const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + start;
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  o.connect(g).connect(audio.destination); o.start(t); o.stop(t + len + 0.05);
+}
+function playSound(kind) {
+  if (!audio) return;
+  try {
+    if (kind === "chime") { tone(880, 0, 0.6); tone(660, 0.28, 0.9); }                  // ding-dong
+    else if (kind === "warning") { for (let i = 0; i < 4; i++) { tone(988, i * 0.45, 0.3, 0.35, "square"); } }
+    else if (kind === "alarm") { for (let i = 0; i < 8; i++) { tone(i % 2 ? 740 : 1046, i * 0.38, 0.34, 0.4, "sawtooth"); } }
+  } catch {}
+}
+let lastAlarmState = null;
+function watchAlarm() {
+  const st = entities[CONFIG.alarm]?.state;
+  if (lastAlarmState && st !== lastAlarmState && st === "triggered") {
+    playSound("alarm"); try { navigator.vibrate?.([900, 200, 900, 200, 900, 200, 900]); } catch {}
+  }
+  lastAlarmState = st;
+}
+
+/* ---------------- vibrate + sound when a door or window opens ---------------- */
 const lastSeen = {};
 function watchDoors(first) {
   CONFIG.sensors.forEach((s) => {
@@ -686,6 +716,7 @@ function watchDoors(first) {
     if (!first && !motion && open && lastSeen[s.id] === false) {
       const armed = (entities[CONFIG.alarm]?.state || "").startsWith("armed") || ["pending", "triggered"].includes(entities[CONFIG.alarm]?.state);
       try { navigator.vibrate?.(armed ? [500, 150, 500, 150, 900] : [250, 120, 250]); } catch {}
+      playSound(armed ? "warning" : "chime");
       toast(`${s.label} opened`);
     }
     lastSeen[s.id] = open;
