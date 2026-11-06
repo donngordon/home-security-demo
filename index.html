@@ -565,7 +565,7 @@ async function connect(interactive) {
     $("app").classList.remove("hidden");
     conn.addEventListener("disconnected", () => ($("conn").textContent = "Connection lost. Reconnecting…"));
     conn.addEventListener("ready", () => ($("conn").textContent = ""));
-    subscribeEntities(conn, (ents) => { const first = !Object.keys(entities).length; entities = ents; render(); if (first) refreshCams(); });
+    subscribeEntities(conn, (ents) => { const first = !Object.keys(entities).length; entities = ents; render(); if (first) refreshCams(); watchDoors(first); });
   } catch (err) {
     store.save(null);
     $("loginMsg").textContent =
@@ -674,6 +674,22 @@ function render() {
     alarmPromptShown = true;
     if (st === "triggered" && responderLocked) $("alarmDlg").showModal();
   }
+}
+
+/* ---------------- vibrate when a door or window opens ---------------- */
+const lastSeen = {};
+function watchDoors(first) {
+  CONFIG.sensors.forEach((s) => {
+    const e = entities[s.id]; if (!e) return;
+    const motion = e.attributes?.device_class === "motion" || s.id.includes("motion");
+    const open = e.state === "on" || e.state === "open" || e.state === "opening";
+    if (!first && !motion && open && lastSeen[s.id] === false) {
+      const armed = (entities[CONFIG.alarm]?.state || "").startsWith("armed") || ["pending", "triggered"].includes(entities[CONFIG.alarm]?.state);
+      try { navigator.vibrate?.(armed ? [500, 150, 500, 150, 900] : [250, 120, 250]); } catch {}
+      toast(`${s.label} opened`);
+    }
+    lastSeen[s.id] = open;
+  });
 }
 
 function ago(iso) {
