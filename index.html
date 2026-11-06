@@ -134,6 +134,46 @@
   #camDlg .live { color: var(--flare); font-size: 13px; font-weight: 600; }
   #camDlg .live::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--flare); margin-right: 6px; animation: porch 1.2s infinite; }
 
+  /* ---------------- climate ---------------- */
+  .climate { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; }
+  .thermo { --heat: #f0a36b; --cool: #8cc8ff; --arc: var(--haze); position: relative; width: 150px; height: 150px; }
+  .thermo[data-action="heating"] { --arc: var(--heat); }
+  .thermo[data-action="cooling"] { --arc: var(--cool); }
+  .thermo svg { width: 100%; height: 100%; transform: rotate(135deg); overflow: visible; }
+  .thermo .track { fill: none; stroke: var(--edge); stroke-width: 8; stroke-linecap: round; }
+  .thermo .arc { fill: none; stroke: var(--arc); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset .4s, stroke .4s;
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--arc) 70%, transparent)); }
+  .thermo .face { position: absolute; inset: 18px; border-radius: 50%; display: grid; place-content: center; text-align: center;
+    background: radial-gradient(circle at 50% 30%, #222b45, #121a2d 70%); box-shadow: inset 0 2px 6px rgba(0,0,0,.55); }
+  .thermo .now { font-family: var(--display); font-size: 46px; line-height: 1; }
+  .thermo .now sup { font-size: 20px; vertical-align: top; margin-left: 1px; }
+  .thermo .lbl { font-size: 11.5px; color: var(--haze); margin-top: 4px; }
+  .setpoint { display: flex; align-items: center; gap: 14px; }
+  .setpoint button { width: 48px; height: 48px; border-radius: 50%; background: var(--glass); border: 1px solid var(--hair);
+    box-shadow: var(--lift); font-size: 24px; line-height: 1; color: var(--paper); }
+  .setpoint .target { font-family: var(--display); font-size: 34px; min-width: 2.6ch; text-align: center; }
+  .climate .how { color: var(--haze); font-size: 15px; margin: 2px 0 12px; }
+  .hvac-modes { display: flex; gap: 6px; margin-top: 18px; grid-column: 1 / -1; }
+  .hvac-modes button { flex: 1; padding: 10px 4px; border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--haze);
+    background: var(--glass); border: 1px solid var(--hair); }
+  .hvac-modes button[aria-pressed="true"] { color: #1d160a; background: linear-gradient(180deg, var(--porch-hi), var(--porch)); border-color: transparent; }
+
+  /* ---------------- lights ---------------- */
+  .lights-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .lights-head h2 { font-size: 28px; }
+  .lights { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .light { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 18px; text-align: left;
+    background: var(--glass); border: 1px solid var(--hair); box-shadow: var(--lift); transition: background .3s, border-color .3s; }
+  .light .bulb { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(255,255,255,.05); color: var(--haze); transition: all .3s; }
+  .light .bulb svg { width: 20px; height: 20px; }
+  .light .nm { display: block; font-weight: 600; font-size: 15px; line-height: 1.25; }
+  .light .st { display: block; color: var(--haze); font-size: 13px; }
+  .light.on { background: linear-gradient(180deg, rgba(243,223,182,.16), rgba(217,183,126,.06)); border-color: rgba(217,183,126,.35); }
+  .light.on .bulb { background: linear-gradient(180deg, var(--porch-hi), var(--porch)); color: #1d160a;
+    box-shadow: 0 0 22px -2px rgba(243,223,182,.7); }
+  .light.gone { opacity: .5; }
+
   /* ---------------- help ---------------- */
   .help { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .hold { --p: 0; position: relative; overflow: hidden; padding: 20px 6px 16px; border-radius: 20px;
@@ -311,6 +351,33 @@
       </div>
     </section>
 
+    <section class="block" id="climateBlock">
+      <h2>Climate</h2>
+      <div class="climate">
+        <div class="thermo" id="thermo">
+          <svg viewBox="0 0 150 150" aria-hidden="true">
+            <circle class="track" cx="75" cy="75" r="68" pathLength="100" stroke-dasharray="75 100"/>
+            <circle class="arc" id="thermoArc" cx="75" cy="75" r="68" pathLength="100" stroke-dasharray="75 100" stroke-dashoffset="75"/>
+          </svg>
+          <div class="face"><div class="now" id="tempNow">–</div><div class="lbl">Inside now</div></div>
+        </div>
+        <div>
+          <div class="how" id="climateHow"></div>
+          <div class="setpoint">
+            <button id="tDown" aria-label="Lower temperature">−</button>
+            <div class="target" id="tTarget" aria-live="polite">–</div>
+            <button id="tUp" aria-label="Raise temperature">+</button>
+          </div>
+        </div>
+        <div class="hvac-modes" id="hvacModes" role="group" aria-label="Heating and cooling mode"></div>
+      </div>
+    </section>
+
+    <section class="block" id="lightsBlock">
+      <div class="lights-head"><h2>Lights</h2><button class="ghost" id="allOff">Turn all off</button></div>
+      <div class="lights" id="lights"></div>
+    </section>
+
     <section class="block">
       <h2>Get help</h2>
       <div class="help">
@@ -384,7 +451,17 @@ const CONFIG = {
     { id: "camera.garage",      label: "Garage" },
     { id: "camera.backyard",    label: "Backyard" },
   ],
-  cameraRefreshMs: 5000,             // how often the small pictures update
+  cameraRefreshMs: 5000,
+  lights: [                          // remove lines you don't need, add more as needed
+    { id: "light.living_room", label: "Living room" },
+    { id: "light.kitchen",     label: "Kitchen" },
+    { id: "light.shoe_hall",   label: "Shoe hall" },
+    { id: "light.porch",       label: "Porch" },
+    { id: "light.garage",      label: "Garage" },
+    { id: "light.bedroom",     label: "Bedroom" },
+  ],
+  thermostat: "climate.thermostat",  // set to null if you don't want it
+  tempUnit: "°",             // how often the small pictures update
   sensors: [
     { id: "binary_sensor.front_door",          label: "Front door",             x: 119, y: 214 },
     { id: "binary_sensor.garage_entry_door",   label: "Garage door to hallway", x: 90,  y: 190 },
@@ -410,6 +487,8 @@ let ents={
  "binary_sensor.living_room_window":{state:"off",attributes:{device_class:"window"}},
  "binary_sensor.hallway_motion":{state:"off",attributes:{device_class:"motion"}}};
 ["front_porch","driveway","garage","backyard"].forEach((n,i)=>ents["camera."+n]={state:"idle",attributes:{entity_picture:CAMS[i]}});
+ents["climate.thermostat"]={state:"heat",attributes:{current_temperature:69,temperature:72,hvac_action:"heating",hvac_modes:["heat","cool","heat_cool","off"]}};
+[["living_room",204],["kitchen",255],["shoe_hall",0],["porch",153],["garage",0],["bedroom",0]].forEach(([n,b])=>ents["light."+n]={state:b?"on":"off",attributes:b?{brightness:b}:{}});
 let listener=null, timers=[];
 const push=()=>{ents={...ents}; listener&&listener(ents)};
 const setS=(id,state)=>{ents[id]={...ents[id],state,last_changed:new Date().toISOString()};push()};
@@ -427,6 +506,15 @@ async function callService(conn,domain,service,data={},target={}){
   else if(k==="alarm_control_panel.alarm_disarm"){ if(data.code!=="1234") throw {message:"Wrong code. In this demo the code is 1234."}; timers.forEach(clearTimeout); timers=[]; setS(AL,"disarmed"); ["binary_sensor.garage_entry_door","binary_sensor.hallway_motion"].forEach(i=>setS(i,"off")); }
   else if(k==="lock.lock"){ setS("lock.front_door","locking"); later(1500,()=>setS("lock.front_door","locked")); }
   else if(k==="script.security_unlock_for_responders"){ setS("lock.front_door","unlocking"); later(1500,()=>setS("lock.front_door","unlocked")); }
+  else if(domain==="light"){ [].concat(target.entity_id).forEach(id=>{ ents[id]={...ents[id],state:service==="turn_on"?"on":"off",attributes:service==="turn_on"?{brightness:255}:{}}; }); push(); }
+  else if(k==="climate.set_temperature"){ const c=ents["climate.thermostat"],a={...c.attributes,temperature:data.temperature};
+    a.hvac_action=c.state==="heat"?(a.current_temperature<a.temperature?"heating":"idle"):c.state==="cool"?(a.current_temperature>a.temperature?"cooling":"idle"):"idle";
+    ents["climate.thermostat"]={...c,attributes:a}; push(); }
+  else if(k==="climate.set_hvac_mode"){ const c=ents["climate.thermostat"],m=data.hvac_mode,a={...c.attributes};
+    if(m==="heat_cool"){a.temperature=null;a.target_temp_low=68;a.target_temp_high=76;a.hvac_action="idle";}
+    else { if(a.temperature==null)a.temperature=m==="cool"?74:70; delete a.target_temp_low; delete a.target_temp_high;
+      a.hvac_action=m==="heat"&&a.current_temperature<a.temperature?"heating":m==="cool"&&a.current_temperature>a.temperature?"cooling":"idle"; }
+    ents["climate.thermostat"]={...c,state:m,attributes:a}; push(); }
   else if(k==="cover.open_cover"){ setS("cover.garage_door","opening"); later(3000,()=>setS("cover.garage_door","open")); }
   else if(k==="cover.close_cover"){ setS("cover.garage_door","closing"); later(3000,()=>setS("cover.garage_door","closed")); }
 }
@@ -542,6 +630,19 @@ function render() {
     $("garageSub").textContent = g ? "Changed " + ago(g.last_changed) : "";
   }
 
+  // Climate
+  if (CONFIG.thermostat) renderClimate();
+
+  // Lights
+  CONFIG.lights.forEach((l, i) => {
+    const e = entities[l.id], el = $("light" + i); if (!el) return;
+    const on = e?.state === "on", b = e?.attributes?.brightness;
+    el.className = "light" + (on ? " on" : "") + (!e || e.state === "unavailable" ? " gone" : "");
+    el.setAttribute("aria-pressed", on);
+    el.querySelector(".st").textContent = !e || e.state === "unavailable" ? "Offline" : on ? (b ? `On, ${Math.round(b / 2.55)}%` : "On") : "Off";
+  });
+  $("allOff") && ($("allOff").disabled = !CONFIG.lights.some((l) => entities[l.id]?.state === "on"));
+
   // Sensors (house drawing + list)
   $("sensors").innerHTML = CONFIG.sensors.map((s, i) => {
     const e = entities[s.id], on = e?.state === "on" || e?.state === "open" || e?.state === "opening";
@@ -600,6 +701,80 @@ if (CONFIG.garage) {
       run("Closing the garage", "cover", "close_cover", {}, { entity_id: CONFIG.garage });
   });
 } else $("garageBlock").remove();
+
+/* ---------------- lights ---------------- */
+const BULB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>';
+if (!CONFIG.lights.length) $("lightsBlock").remove();
+$("lights").innerHTML = CONFIG.lights.map((l, i) =>
+  `<button class="light" id="light${i}" data-light="${i}" aria-pressed="false">
+     <span class="bulb">${BULB}</span><span><span class="nm">${escapeHtml(l.label)}</span><span class="st">…</span></span>
+   </button>`).join("");
+document.querySelectorAll("[data-light]").forEach((b) => b.onclick = () => {
+  const l = CONFIG.lights[b.dataset.light], e = entities[l.id];
+  if (!e || e.state === "unavailable") return toast(`${l.label} light is offline`);
+  const on = e.state === "on";
+  run(`${l.label} light ${on ? "off" : "on"}`, "light", on ? "turn_off" : "turn_on", {}, { entity_id: l.id });
+});
+$("allOff").onclick = () => run("All lights off", "light", "turn_off", {}, { entity_id: CONFIG.lights.map((l) => l.id) });
+
+/* ---------------- climate ---------------- */
+const MODE_NAMES = { heat: "Heat", cool: "Cool", heat_cool: "Auto", auto: "Auto", off: "Off", fan_only: "Fan", dry: "Dry" };
+let pendingTarget = null, sendTimer = 0;
+function climateTargets(e) {
+  const a = e.attributes;
+  if (a.temperature != null) return { single: a.temperature };
+  if (a.target_temp_low != null) return { low: a.target_temp_low, high: a.target_temp_high };
+  return {};
+}
+function renderClimate() {
+  const e = entities[CONFIG.thermostat];
+  if (!e || e.state === "unavailable") {
+    $("tempNow").textContent = "–"; $("climateHow").textContent = "The thermostat isn't responding.";
+    $("tUp").disabled = $("tDown").disabled = true; return;
+  }
+  const a = e.attributes, now = a.current_temperature, t = climateTargets(e);
+  const action = a.hvac_action || "idle";
+  $("thermo").dataset.action = action;
+  $("tempNow").innerHTML = now != null ? `${Math.round(now)}<sup>${CONFIG.tempUnit}</sup>` : "–";
+  const show = pendingTarget ?? t.single;
+  $("tTarget").textContent = e.state === "off" ? "Off" : show != null ? `${Math.round(show)}${CONFIG.tempUnit}` : `${Math.round(t.low)}–${Math.round(t.high)}`;
+  $("tUp").disabled = $("tDown").disabled = e.state === "off";
+  $("climateHow").textContent =
+    e.state === "off" ? "Heating and cooling are off." :
+    action === "heating" ? `Heating to ${Math.round(show ?? t.low)}${CONFIG.tempUnit}` :
+    action === "cooling" ? `Cooling to ${Math.round(show ?? t.high)}${CONFIG.tempUnit}` :
+    "Holding temperature";
+  // arc shows the inside temperature on a 50–90 scale
+  const p = now == null ? 0 : Math.min(1, Math.max(0, (now - 50) / 40));
+  $("thermoArc").setAttribute("stroke-dashoffset", 75 - 75 * p);
+  const modes = (a.hvac_modes || ["heat", "cool", "off"]).filter((m) => MODE_NAMES[m]);
+  if ($("hvacModes").dataset.built !== modes.join()) {
+    $("hvacModes").dataset.built = modes.join();
+    $("hvacModes").innerHTML = modes.map((m) => `<button data-hvac="${m}">${MODE_NAMES[m]}</button>`).join("");
+    $("hvacModes").querySelectorAll("button").forEach((b) => b.onclick = () =>
+      run(`${MODE_NAMES[b.dataset.hvac]} mode on`, "climate", "set_hvac_mode", { hvac_mode: b.dataset.hvac }, { entity_id: CONFIG.thermostat }));
+  }
+  $("hvacModes").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.hvac === e.state));
+}
+function nudge(step) {
+  const e = entities[CONFIG.thermostat]; if (!e) return;
+  const t = climateTargets(e);
+  clearTimeout(sendTimer);
+  if (t.single != null || pendingTarget != null) {
+    pendingTarget = Math.min(90, Math.max(50, (pendingTarget ?? t.single) + step));
+    renderClimate();
+    sendTimer = setTimeout(async () => {
+      const v = pendingTarget;
+      await run(`Set to ${v}${CONFIG.tempUnit}`, "climate", "set_temperature", { temperature: v }, { entity_id: CONFIG.thermostat });
+      pendingTarget = null; renderClimate();
+    }, 700);
+  } else if (t.low != null) {
+    run("Temperature range changed", "climate", "set_temperature",
+      { target_temp_low: t.low + step, target_temp_high: t.high + step }, { entity_id: CONFIG.thermostat });
+  }
+}
+if (CONFIG.thermostat) { $("tUp").onclick = () => nudge(1); $("tDown").onclick = () => nudge(-1); }
+else $("climateBlock").remove();
 
 /* ---------------- cameras ---------------- */
 const base = () => (CONFIG.hassUrl || location.origin).replace(/\/$/, "");
