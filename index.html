@@ -49,7 +49,8 @@
   body[data-state^="armed"] { --state: var(--sage); }
   body[data-state="arming"], body[data-state="pending"] { --state: var(--porch); }
   body[data-state="triggered"] { --state: var(--flare); }
-  main { max-width: 460px; margin: 0 auto; }
+  main { max-width: 460px; margin: 0 auto; position: relative; z-index: 1; }
+  #sky { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
   h1, h2, .display { font-family: var(--display); font-weight: 400; letter-spacing: -0.005em; margin: 0; }
   p { margin: 0; }
   .muted { color: var(--haze); }
@@ -287,7 +288,7 @@
   #alarmDlg .dial::before { background: radial-gradient(circle at 50% 30%, #4c1d2f, #2a0f1c 70%); }
   #alarmDlg .hint { color: #f2c6c6; font-size: 14px; margin-top: 14px; }
 
-  #toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 22px); transform: translate(-50%, 20px);
+  #toast { z-index: 5; position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 22px); transform: translate(-50%, 20px);
     background: rgba(244,241,234,.96); color: var(--night); box-shadow: 0 16px 40px -12px #000; font-weight: 600; padding: 12px 20px; border-radius: 99px;
     opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; max-width: 90vw; text-align: center; }
   #toast.show { opacity: 1; transform: translate(-50%, 0); }
@@ -295,6 +296,8 @@
   .demo { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin: 8px 0 6px;
     padding: 12px 12px 12px 16px; border-radius: 18px; background: var(--glass); border: 1px solid rgba(217,183,126,.28); font-size: 13.5px; color: var(--haze); }
   .demo b { color: var(--paper); font-weight: 600; }
+  .wxdemo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 6px; font-size: 13px; color: var(--haze); }
+  .wxdemo button { padding: 7px 11px; border-radius: 99px; background: var(--glass); border: 1px solid var(--hair); font-size: 13px; font-weight: 600; }
   .demo button { flex: none; background: linear-gradient(180deg, var(--porch-hi), var(--porch)); color: #1d160a; font-weight: 700; padding: 10px 14px; border-radius: 12px; font-size: 14px; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -302,6 +305,7 @@
 </style>
 </head>
 <body data-state="disarmed">
+<canvas id="sky" aria-hidden="true"></canvas>
 <main>
   <!-- ======================= LOGIN ======================= -->
   <section id="login">
@@ -344,6 +348,11 @@
     <div class="demo">
       <p><b>Demo with sample data.</b> Nothing here controls a real home. Disarm code: 1234.</p>
       <button id="simBtn">Try a break-in</button>
+    </div>
+    <div class="wxdemo" role="group" aria-label="Preview the weather background">
+      <span>Preview weather:</span>
+      <button data-wx="sunny">Sunny</button><button data-wx="partlycloudy">Partly cloudy</button><button data-wx="cloudy">Gloomy</button>
+      <button data-wx="rainy">Rain</button><button data-wx="lightning-rainy">Storm</button><button data-wx="snowy">Snow</button><button data-wx="clear-night">Night</button>
     </div>
 
     <div class="hero">
@@ -583,7 +592,10 @@ ents["input_boolean.security_night_schedule"]={state:"on",attributes:{}};
 ents["input_boolean.security_morning_disarm"]={state:"off",attributes:{}};
 ents["input_datetime.security_night_arm"]={state:"23:00:00",attributes:{}};
 ents["input_datetime.security_morning_disarm"]={state:"06:30:00",attributes:{}};
-ents["weather.forecast_home"]={state:"partlycloudy",attributes:{temperature:48}};
+ents["weather.forecast_home"]={state:"partlycloudy",attributes:{temperature:48,high:54,low:39}};
+const WX={sunny:[84,88,70],partlycloudy:[66,70,55],cloudy:[56,59,47],rainy:[52,55,46],"lightning-rainy":[74,79,66],snowy:[28,31,22],"clear-night":[45,54,39]};
+window.__setWeather=(c)=>{const [t,h,l]=WX[c]; ents["weather.forecast_home"]={state:c,attributes:{temperature:t,high:h,low:l},last_changed:new Date().toISOString()};
+  ents["sun.sun"]={state:c==="clear-night"?"below_horizon":"above_horizon",attributes:{}}; push();};
 ents["sun.sun"]={state:(new Date().getHours()>=7&&new Date().getHours()<17)?"above_horizon":"below_horizon",attributes:{}};
 let listener=null, timers=[];
 const push=()=>{ents={...ents}; listener&&listener(ents)};
@@ -597,7 +609,7 @@ const AL="alarm_control_panel.home_security";
 async function callService(conn,domain,service,data={},target={},returnResponse){
   await new Promise(r=>setTimeout(r,250));
   const k=domain+"."+service;
-  if(k==="weather.get_forecasts") return {response:{"weather.forecast_home":{forecast:[{condition:"partlycloudy",temperature:54,templow:39}]}}};
+  if(k==="weather.get_forecasts"){ const w=ents["weather.forecast_home"]; return {response:{"weather.forecast_home":{forecast:[{condition:w.state,temperature:w.attributes.high,templow:w.attributes.low}]}}}; }
   if(k==="alarm_control_panel.alarm_arm_home") setS(AL,"armed_home");
   else if(k==="alarm_control_panel.alarm_arm_away"){ setS(AL,"arming"); if(ents["cover.garage_door"].state==="open"){setS("cover.garage_door","closing");later(3000,()=>setS("cover.garage_door","closed"))} later(5000,()=>ents[AL].state==="arming"&&setS(AL,"armed_away")); }
   else if(k==="alarm_control_panel.alarm_disarm"){ if(data.code!=="1234") throw {message:"Wrong code. In this demo the code is 1234."}; timers.forEach(clearTimeout); timers=[]; setS(AL,"disarmed"); ["binary_sensor.garage_entry_door","binary_sensor.hallway_motion"].forEach(i=>setS(i,"off")); }
@@ -671,7 +683,7 @@ $("logoutBtn").onclick = () => { store.save(null); location.reload(); };
 
 function greeting() {
   const h = new Date().getHours();
-  return h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  return h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 
 /* ---------------- house markers ---------------- */
@@ -896,6 +908,142 @@ document.querySelectorAll("[data-light]").forEach((b) => b.onclick = () => {
 });
 $("allOff").onclick = () => run("All lights off", "light", "turn_off", {}, { entity_id: CONFIG.lights.map((l) => l.id) });
 
+/* ---------------- live weather background ---------------- */
+const Sky = (() => {
+  const cv = $("sky"), ctx = cv.getContext("2d");
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W = 0, H = 0, scene = null, stars = [], clouds = [], drops = [], flakes = [], motes = [], birds = [];
+  let nextFlock = 0, flash = 0, nextFlash = 0, shooting = null, nextShoot = 0, last = 0, raf = 0;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+
+  function size() {
+    const d = Math.min(2, devicePixelRatio || 1);
+    W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0);
+  }
+  function pick(cond, day) {
+    if (["rainy", "pouring"].includes(cond)) return "rain";
+    if (["lightning", "lightning-rainy"].includes(cond)) return "storm";
+    if (["snowy", "snowy-rainy", "hail"].includes(cond)) return "snow";
+    if (["cloudy", "fog", "windy", "windy-variant", "exceptional"].includes(cond)) return day ? "gloomy" : "nightcloud";
+    if (cond === "partlycloudy") return day ? "partly" : "nightcloud";
+    if (cond === "clear-night" || !day) return "night";
+    return "sun";
+  }
+  function build() {
+    const has = (...k) => k.includes(scene);
+    stars = has("night", "nightcloud") ? Array.from({ length: 80 }, () => ({ x: rnd(0, W), y: rnd(0, H * .62), r: rnd(.4, 1.5), p: rnd(0, 6.3) })) : [];
+    const nC = { partly: 3, gloomy: 7, rain: 6, storm: 7, snow: 5, nightcloud: 4 }[scene] || 0;
+    clouds = Array.from({ length: nC }, (_, i) => ({ x: rnd(-200, W), y: rnd(20, H * .45), s: rnd(.7, 1.5), v: rnd(4, 11) * (scene === "storm" ? 2 : 1) }));
+    drops = has("rain", "storm") ? Array.from({ length: scene === "storm" ? 140 : 100 }, () => ({ x: rnd(0, W), y: rnd(-H, H), l: rnd(10, 22), v: rnd(380, 620) })) : [];
+    flakes = has("snow") ? Array.from({ length: 80 }, () => ({ x: rnd(0, W), y: rnd(-H, H), r: rnd(1, 3.2), v: rnd(18, 45), p: rnd(0, 6.3) })) : [];
+    motes = has("sun") ? Array.from({ length: 26 }, () => ({ x: rnd(0, W), y: rnd(0, H), r: rnd(.8, 2.2), v: rnd(4, 12), p: rnd(0, 6.3) })) : [];
+    birds = []; nextFlock = performance.now() + 1500;
+  }
+  // Clouds are drawn once each onto a small blurred sprite, then moved around: soft edges, no "bubbles".
+  const sprites = {};
+  function cloudSprite(a) {
+    if (sprites[a]) return sprites[a];
+    const c = document.createElement("canvas"); c.width = 320; c.height = 170;
+    const x = c.getContext("2d");
+    x.filter = "blur(10px)"; x.fillStyle = `rgba(214,222,238,${a})`; x.beginPath();
+    [[70, 100, 40], [112, 80, 52], [168, 88, 46], [212, 104, 34], [130, 112, 44], [96, 118, 30], [190, 118, 30]]
+      .forEach(([cx, cy, r]) => { x.moveTo(cx + r, cy); x.arc(cx, cy, r, 0, 6.3); });
+    x.fill();
+    return (sprites[a] = c);
+  }
+  function cloud(c, a) { const sp = cloudSprite(a); ctx.drawImage(sp, c.x, c.y - 90 * c.s, 320 * c.s, 170 * c.s); }
+  function spawnFlock(now) {
+    const n = Math.round(rnd(3, 6)), y = rnd(H * .08, H * .38), dir = Math.random() < .5 ? 1 : -1, v = rnd(38, 60);
+    for (let i = 0; i < n; i++) birds.push({ x: dir > 0 ? -40 - i * rnd(18, 30) : W + 40 + i * rnd(18, 30), y: y + rnd(-18, 18) + Math.abs(i - n / 2) * 6,
+      s: rnd(6, 10), v: v * dir, p: rnd(0, 6.3), f: rnd(7, 10) });
+    nextFlock = now + rnd(9000, 16000);
+  }
+  function frame(now) {
+    const dt = Math.min(.05, (now - (last || now)) / 1000); last = now;
+    ctx.clearRect(0, 0, W, H);
+    const t = now / 1000;
+    // tint
+    const tint = { sun: ["rgba(255,196,120,.26)", W * .85, H * .08], partly: ["rgba(255,205,140,.14)", W * .85, H * .08],
+      gloomy: ["rgba(150,162,186,.16)", W * .5, 0], rain: ["rgba(110,140,185,.16)", W * .5, 0], storm: ["rgba(120,120,170,.18)", W * .5, 0],
+      snow: ["rgba(220,230,245,.14)", W * .5, 0], night: ["rgba(120,140,220,.10)", W * .8, H * .1], nightcloud: ["rgba(120,140,200,.08)", W * .5, 0] }[scene];
+    if (tint) { const g = ctx.createRadialGradient(tint[1], tint[2], 0, tint[1], tint[2], Math.max(W, H) * .9); g.addColorStop(0, tint[0]); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+    // sun
+    if (scene === "sun" || scene === "partly") {
+      const cx = W * .9, cy = H * .05, a = scene === "sun" ? 1 : .6;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 150); g.addColorStop(0, `rgba(255,226,170,${.55 * a})`); g.addColorStop(1, "rgba(255,226,170,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 150, 0, 6.3); ctx.fill();
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(t * .05); ctx.strokeStyle = `rgba(255,224,170,${.16 * a})`; ctx.lineWidth = 2;
+      for (let i = 0; i < 14; i++) { ctx.rotate(Math.PI / 7); ctx.beginPath(); ctx.moveTo(48, 0); ctx.lineTo(120 + 18 * Math.sin(t + i), 0); ctx.stroke(); }
+      ctx.restore();
+      ctx.fillStyle = `rgba(255,236,196,${.45 * a})`; ctx.beginPath(); ctx.arc(cx, cy, 24, 0, 6.3); ctx.fill();
+    }
+    // stars, moon, shooting stars
+    stars.forEach((s) => { ctx.fillStyle = `rgba(244,241,234,${.25 + .55 * (.5 + .5 * Math.sin(t * 1.6 + s.p))})`; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.3); ctx.fill(); });
+    if (scene === "night" || scene === "nightcloud") {
+      const mx = W * .82, my = H * .1;
+      const g = ctx.createRadialGradient(mx, my, 0, mx, my, 90); g.addColorStop(0, "rgba(230,232,255,.22)"); g.addColorStop(1, "rgba(230,232,255,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, 90, 0, 6.3); ctx.fill();
+      ctx.fillStyle = "rgba(244,241,234,.92)"; ctx.beginPath(); ctx.arc(mx, my, 22, 0, 6.3); ctx.fill();
+      ctx.globalCompositeOperation = "destination-out"; ctx.beginPath(); ctx.arc(mx + 10, my - 6, 19, 0, 6.3); ctx.fill(); ctx.globalCompositeOperation = "source-over";
+      if (scene === "night") {
+        if (!shooting && now > nextShoot) { shooting = { x: rnd(W * .1, W * .7), y: rnd(10, H * .3), l: 0 }; nextShoot = now + rnd(6000, 12000); }
+        if (shooting) {
+          shooting.l += dt * 900; const x = shooting.x + shooting.l, y = shooting.y + shooting.l * .45;
+          const g2 = ctx.createLinearGradient(x - 90, y - 40, x, y); g2.addColorStop(0, "rgba(255,255,255,0)"); g2.addColorStop(1, "rgba(255,255,255,.85)");
+          ctx.strokeStyle = g2; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 90, y - 40); ctx.lineTo(x, y); ctx.stroke();
+          if (shooting.l > 420) shooting = null;
+        }
+      }
+    }
+    // dust motes in sunshine
+    motes.forEach((m) => { m.y -= m.v * dt; m.x += Math.sin(t + m.p) * .15; if (m.y < -5) { m.y = H + 5; m.x = rnd(0, W); }
+      ctx.fillStyle = `rgba(255,228,180,${.18 + .2 * Math.sin(t * 2 + m.p)})`; ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 6.3); ctx.fill(); });
+    // clouds
+    const ca = { partly: .16, gloomy: .2, rain: .17, storm: .2, snow: .15, nightcloud: .11 }[scene] || 0;
+    clouds.forEach((c) => { c.x += c.v * dt; if (c.x > W + 40) { c.x = -180 * c.s; c.y = rnd(20, H * .45); } cloud(c, ca); });
+    // birds
+    if (["sun", "partly", "gloomy"].includes(scene)) {
+      if (now > nextFlock) spawnFlock(now);
+      ctx.strokeStyle = scene === "gloomy" ? "rgba(235,235,240,.55)" : "rgba(250,240,222,.6)"; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+      birds.forEach((b) => {
+        b.x += b.v * dt; b.y += Math.sin(t * .8 + b.p) * .12; const w = Math.sin(t * b.f + b.p), s = b.s;
+        ctx.beginPath(); ctx.moveTo(b.x - s, b.y - w * s * .35); ctx.quadraticCurveTo(b.x - s * .45, b.y - s * .55 * w - 2, b.x, b.y);
+        ctx.quadraticCurveTo(b.x + s * .45, b.y - s * .55 * w - 2, b.x + s, b.y - w * s * .35); ctx.stroke();
+      });
+      birds = birds.filter((b) => b.x > -120 && b.x < W + 120);
+    }
+    // rain
+    if (drops.length) {
+      ctx.strokeStyle = "rgba(190,210,240,.32)"; ctx.lineWidth = 1.1; ctx.beginPath();
+      drops.forEach((d) => { d.y += d.v * dt; d.x -= d.v * dt * .12; if (d.y > H) { d.y = rnd(-60, -10); d.x = rnd(0, W + 60); }
+        ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + d.l * .12, d.y - d.l); });
+      ctx.stroke();
+    }
+    // lightning
+    if (scene === "storm") {
+      if (now > nextFlash) { flash = 1; nextFlash = now + rnd(4500, 9000); }
+      if (flash > 0) { ctx.fillStyle = `rgba(220,225,255,${flash * .22})`; ctx.fillRect(0, 0, W, H); flash -= dt * 2.6; }
+    }
+    // snow
+    flakes.forEach((f) => { f.y += f.v * dt; f.x += Math.sin(t * .9 + f.p) * .35; if (f.y > H + 5) { f.y = -5; f.x = rnd(0, W); }
+      ctx.fillStyle = "rgba(244,246,252,.7)"; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.3); ctx.fill(); });
+  }
+  function loop(now) {
+    raf = requestAnimationFrame(loop);
+    if (now - (loop.t || 0) < 33) return;                 // about 30 frames a second, easy on the battery
+    loop.t = now; frame(now);
+  }
+  function start() { cancelAnimationFrame(raf); last = 0; if (still) frame(performance.now()); else raf = requestAnimationFrame(loop); }
+  addEventListener("resize", () => { size(); build(); if (still) frame(performance.now()); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) cancelAnimationFrame(raf); else start(); });
+  size();
+  return {
+    set(cond, day) { const next = pick(cond, day); if (next === scene) return; scene = next; build(); start(); },
+  };
+})();
+// Before sign-in: sunshine by day, stars at night.
+Sky.set(null, new Date().getHours() >= 7 && new Date().getHours() < 18);
+
 /* ---------------- daily briefing (greeting, weather, advice, safety) ---------------- */
 const ICONS = {
   sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
@@ -914,8 +1062,11 @@ const CONDITIONS = { "clear-night": "clear", cloudy: "cloudy", fog: "foggy", hai
   partlycloudy: "partly cloudy", pouring: "heavy rain", rainy: "rainy", snowy: "snowy", "snowy-rainy": "sleet", sunny: "sunny", windy: "windy", "windy-variant": "windy", exceptional: "unusual weather" };
 
 async function loadForecast() {
-  if (!CONFIG.weather || !entities[CONFIG.weather] || Date.now() - forecastAt < 30 * 60e3) return;
-  forecastAt = Date.now();
+  const w = CONFIG.weather && entities[CONFIG.weather];
+  if (!w) return;
+  const key = w.state + "|" + w.attributes?.temperature;
+  if (key === loadForecast.key && Date.now() - forecastAt < 30 * 60e3) return;
+  loadForecast.key = key; forecastAt = Date.now();
   try {
     const r = await callService(conn, "weather", "get_forecasts", { type: "daily" }, { entity_id: CONFIG.weather }, true);
     const resp = r?.response ?? r;
@@ -935,7 +1086,9 @@ async function buildBriefing(opening) {
   // Weather
   const w = entities[CONFIG.weather];
   const outside = w?.attributes?.temperature, high = forecast?.temperature, low = forecast?.templow;
-  const cond = CONDITIONS[forecast?.condition || w?.state] || "";
+  const cond = CONDITIONS[w?.state || forecast?.condition] || "";
+  const isDay = entities["sun.sun"] ? entities["sun.sun"].state === "above_horizon" : (new Date().getHours() >= 7 && new Date().getHours() < 18);
+  Sky.set(w?.state || forecast?.condition, isDay);
   if (outside != null) {
     $("briefWx").innerHTML = `<b>${R(outside)}${U()} outside</b>${cond ? ", " + cond : ""}` +
       (high != null ? `. Today ${low != null ? R(low) + U() + " to " : "up to "}${R(high)}${U()}.` : ".");
@@ -1243,6 +1396,7 @@ function askPin(title) {
 setInterval(() => conn && render(), 30000);
 connect(false);
 $("simBtn").onclick = () => { window.__simulateBreakIn(); toast("Garage door to the hallway opened. Disarm with 1234, or wait."); window.scrollTo({ top: 0, behavior: "smooth" }); };
+document.querySelectorAll("[data-wx]").forEach((b) => b.onclick = () => window.__setWeather(b.dataset.wx));
 </script>
 <script>
   if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
