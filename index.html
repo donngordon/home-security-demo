@@ -126,6 +126,23 @@
   .door.compact .what { font-size: 29px; }
   .door .name { font-weight: 600; font-size: 15px; color: var(--paper); margin-bottom: 2px; }
 
+  /* ---------------- night schedule ---------------- */
+  .sched { border-radius: 22px; background: var(--glass); border: 1px solid var(--hair); box-shadow: var(--lift); padding: 4px 16px; }
+  .sched .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--hair); }
+  .sched .row:last-child { border-bottom: 0; }
+  .sched .row.sub { padding-top: 0; border-bottom: 1px solid var(--hair); }
+  .sched .nm { font-weight: 600; }
+  .sched .hint { color: var(--haze); font-size: 13px; }
+  .sched label { color: var(--haze); font-size: 15px; }
+  .sched input[type="time"] { font: 400 26px var(--display); color: var(--paper); background: rgba(255,255,255,.05);
+    border: 1px solid var(--hair); border-radius: 12px; padding: 6px 12px; color-scheme: dark; }
+  .sched input:disabled { opacity: .4; }
+  .switch { flex: none; width: 54px; height: 32px; border-radius: 99px; position: relative; background: var(--edge); transition: background .25s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--paper); box-shadow: 0 2px 6px rgba(0,0,0,.4); transition: transform .25s; }
+  .switch[aria-checked="true"] { background: linear-gradient(180deg, var(--porch-hi), var(--porch)); }
+  .switch[aria-checked="true"]::after { transform: translateX(22px); }
+
   /* ---------------- cameras ---------------- */
   .cams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .cams.one { grid-template-columns: 1fr; }
@@ -321,6 +338,23 @@
       </div>
     </div>
 
+    <section class="block" id="nightBlock">
+      <h2>Night schedule</h2>
+      <div class="sched">
+        <div class="row">
+          <div><div class="nm">Arm automatically</div><div class="hint">Home mode: doors and windows</div></div>
+          <button class="switch" id="nightOn" role="switch" aria-checked="false" aria-label="Arm automatically at night"></button>
+        </div>
+        <div class="row sub"><label for="nightAt">Arm at</label><input type="time" id="nightAt"></div>
+        <div class="row">
+          <div><div class="nm">Turn off in the morning</div><div class="hint">Needs no code</div></div>
+          <button class="switch" id="mornOn" role="switch" aria-checked="false" aria-label="Turn off the alarm in the morning"></button>
+        </div>
+        <div class="row sub"><label for="mornAt">Turn off at</label><input type="time" id="mornAt"></div>
+      </div>
+      <p class="note" id="nightNote"></p>
+    </section>
+
     <section class="block" id="camBlock">
       <h2>Cameras</h2>
       <div class="cams" id="cams"></div>
@@ -465,6 +499,12 @@ const CONFIG = {
     { id: "light.front_yard_garden",  label: "Front yard garden", outside: true },
     { id: "light.back_yard_garden",   label: "Back yard garden",  outside: true },
   ],
+  night: {                           // night schedule helpers (created by home_security.yaml)
+    enabled: "input_boolean.security_night_schedule",
+    armAt: "input_datetime.security_night_arm",
+    disarmEnabled: "input_boolean.security_morning_disarm",
+    disarmAt: "input_datetime.security_morning_disarm",
+  },
   thermostat: "climate.thermostat",  // set to null if you don't want it
   tempUnit: "°",             // how often the small pictures update
   sensors: [
@@ -496,6 +536,10 @@ let ents={
 ["front_porch","driveway","garage","backyard"].forEach((n,i)=>ents["camera."+n]={state:"idle",attributes:{entity_picture:CAMS[i]}});
 ents["climate.thermostat"]={state:"heat",attributes:{current_temperature:69,temperature:72,hvac_action:"heating",hvac_modes:["heat","cool","heat_cool","off"]}};
 [["living_room",204],["kitchen",255],["shoe_hall",0],["porch",153],["garage",0],["bedroom",0],["front_yard_garden",178],["back_yard_garden",0]].forEach(([n,b])=>ents["light."+n]={state:b?"on":"off",attributes:b?{brightness:b}:{}});
+ents["input_boolean.security_night_schedule"]={state:"on",attributes:{}};
+ents["input_boolean.security_morning_disarm"]={state:"off",attributes:{}};
+ents["input_datetime.security_night_arm"]={state:"23:00:00",attributes:{}};
+ents["input_datetime.security_morning_disarm"]={state:"06:30:00",attributes:{}};
 let listener=null, timers=[];
 const push=()=>{ents={...ents}; listener&&listener(ents)};
 const setS=(id,state)=>{ents[id]={...ents[id],state,last_changed:new Date().toISOString()};push()};
@@ -514,6 +558,8 @@ async function callService(conn,domain,service,data={},target={}){
   else if(k==="lock.lock"){ [].concat(target.entity_id).forEach(id=>{ if(ents[id].state!=="locked"){ setS(id,"locking"); later(1500,()=>setS(id,"locked")); } }); }
   else if(k==="lock.unlock"){ [].concat(target.entity_id).forEach(id=>{ setS(id,"unlocking"); later(1500,()=>setS(id,"unlocked")); }); }
   else if(k==="script.security_unlock_for_responders"){ setS("lock.front_door","unlocking"); later(1500,()=>setS("lock.front_door","unlocked")); }
+  else if(k==="input_boolean.toggle"){ const id=target.entity_id; setS(id, ents[id].state==="on"?"off":"on"); }
+  else if(k==="input_datetime.set_datetime"){ setS(target.entity_id, data.time); }
   else if(domain==="light"){ [].concat(target.entity_id).forEach(id=>{ ents[id]={...ents[id],state:service==="turn_on"?"on":"off",attributes:service==="turn_on"?{brightness:255}:{}}; }); push(); }
   else if(k==="climate.set_temperature"){ const c=ents["climate.thermostat"],a={...c.attributes,temperature:data.temperature};
     a.hvac_action=c.state==="heat"?(a.current_temperature<a.temperature?"heating":"idle"):c.state==="cool"?(a.current_temperature>a.temperature?"cooling":"idle"):"idle";
@@ -645,6 +691,9 @@ function render() {
     $("garageDial").setAttribute("aria-label", shut ? "Hold to open the garage" : "Close the garage");
     $("garageSub").textContent = g ? "Changed " + ago(g.last_changed) : "";
   }
+
+  // Night schedule
+  renderNight();
 
   // Climate
   if (CONFIG.thermostat) renderClimate();
@@ -800,6 +849,34 @@ document.querySelectorAll("[data-light]").forEach((b) => b.onclick = () => {
   run(`${l.label} light ${on ? "off" : "on"}`, "light", on ? "turn_off" : "turn_on", {}, { entity_id: l.id });
 });
 $("allOff").onclick = () => run("All lights off", "light", "turn_off", {}, { entity_id: CONFIG.lights.map((l) => l.id) });
+
+/* ---------------- night schedule ---------------- */
+const hm = (v) => (v || "").slice(0, 5);
+function niceTime(v) {
+  if (!v) return "";
+  const [h, m] = v.split(":").map(Number);
+  return `${(h % 12) || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+function renderNight() {
+  const n = CONFIG.night, on = entities[n.enabled]?.state === "on", mOn = entities[n.disarmEnabled]?.state === "on";
+  if (!entities[n.enabled]) { $("nightNote").textContent = "Add the night schedule from home_security.yaml to use this."; return; }
+  $("nightOn").setAttribute("aria-checked", on); $("mornOn").setAttribute("aria-checked", mOn);
+  const armAt = entities[n.armAt]?.state, offAt = entities[n.disarmAt]?.state;
+  if (document.activeElement !== $("nightAt")) $("nightAt").value = hm(armAt);
+  if (document.activeElement !== $("mornAt")) $("mornAt").value = hm(offAt);
+  $("nightAt").disabled = !on; $("mornAt").disabled = !mOn;
+  $("nightNote").textContent = !on ? "The alarm won't arm by itself. Turn this on to arm it every night."
+    : `Every night at ${niceTime(armAt)} the alarm arms in Home mode and every door locks.` +
+      (mOn ? ` It turns off at ${niceTime(offAt)}.` : " You turn it off in the morning with your code.");
+}
+$("nightOn").onclick = () => run("Night schedule " + ($("nightOn").getAttribute("aria-checked") === "true" ? "off" : "on"),
+  "input_boolean", "toggle", {}, { entity_id: CONFIG.night.enabled });
+$("mornOn").onclick = () => run("Morning turn-off " + ($("mornOn").getAttribute("aria-checked") === "true" ? "off" : "on"),
+  "input_boolean", "toggle", {}, { entity_id: CONFIG.night.disarmEnabled });
+$("nightAt").onchange = (e) => e.target.value && run(`Arms at ${niceTime(e.target.value)}`, "input_datetime", "set_datetime",
+  { time: e.target.value + ":00" }, { entity_id: CONFIG.night.armAt });
+$("mornAt").onchange = (e) => e.target.value && run(`Turns off at ${niceTime(e.target.value)}`, "input_datetime", "set_datetime",
+  { time: e.target.value + ":00" }, { entity_id: CONFIG.night.disarmAt });
 
 /* ---------------- climate ---------------- */
 const MODE_NAMES = { heat: "Heat", cool: "Cool", heat_cool: "Auto", auto: "Auto", off: "Off", fan_only: "Fan", dry: "Dry" };
