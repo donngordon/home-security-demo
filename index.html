@@ -126,6 +126,32 @@
   .door.compact .what { font-size: 29px; }
   .door .name { font-weight: 600; font-size: 15px; color: var(--paper); margin-bottom: 2px; }
 
+  /* ---------------- daily briefing ---------------- */
+  .brief { margin: 10px 0 4px; padding: 20px 18px 8px; border-radius: 24px; background: var(--glass);
+    border: 1px solid var(--hair); box-shadow: var(--lift); }
+  .brief-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .brief h2 { font-size: 34px; line-height: 1.05; }
+  .brief .wx { color: var(--haze); margin-top: 6px; font-size: 15px; }
+  .brief .wx b { color: var(--paper); font-weight: 600; }
+  .speak { flex: none; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; color: #1d160a;
+    background: linear-gradient(180deg, var(--porch-hi), var(--porch)); box-shadow: 0 10px 24px -10px rgba(217,183,126,.7); }
+  .speak svg { width: 22px; height: 22px; }
+  .speak.talking { animation: porch 1.2s ease-in-out infinite; }
+  .tips { list-style: none; margin: 16px 0 0; padding: 0; }
+  .tips li { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; padding: 13px 0; border-top: 1px solid var(--hair); }
+  .tips .ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.05); color: var(--haze); }
+  .tips .ic svg { width: 18px; height: 18px; }
+  .tips li.good .ic { color: var(--sage); background: color-mix(in srgb, var(--sage) 14%, transparent); }
+  .tips li.warn .ic { color: var(--porch); background: color-mix(in srgb, var(--porch) 16%, transparent); }
+  .tips li.bad .ic { color: var(--flare); background: color-mix(in srgb, var(--flare) 16%, transparent); }
+  .tips .tx { font-size: 15px; line-height: 1.4; }
+  .tips .tx small { display: block; color: var(--haze); font-size: 13px; margin-top: 2px; }
+  .tips .act { padding: 8px 12px; border-radius: 12px; font-size: 13.5px; font-weight: 700; color: #1d160a;
+    background: linear-gradient(180deg, var(--porch-hi), var(--porch)); white-space: nowrap; }
+  .brief .auto { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0 10px;
+    border-top: 1px solid var(--hair); color: var(--haze); font-size: 14px; }
+  .brief .auto .switch { transform: scale(.85); transform-origin: right center; }
+
   /* ---------------- night schedule ---------------- */
   .sched { border-radius: 22px; background: var(--glass); border: 1px solid var(--hair); box-shadow: var(--lift); padding: 4px 16px; }
   .sched .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--hair); }
@@ -299,6 +325,21 @@
       <div class="hello" id="who"></div>
       <button class="ghost" id="logoutBtn">Sign out</button>
     </div>
+
+    <section class="brief" id="brief" aria-live="polite">
+      <div class="brief-top">
+        <div>
+          <h2 id="briefHello">Hello</h2>
+          <p class="wx" id="briefWx">Checking today's weather…</p>
+        </div>
+        <button class="speak" id="speakBtn" aria-label="Read my briefing out loud">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+        </button>
+      </div>
+      <ul class="tips" id="tips"></ul>
+      <div class="auto"><span>Read it out loud when I open the app</span>
+        <button class="switch" id="autoSpeak" role="switch" aria-checked="true" aria-label="Read the briefing out loud when the app opens"></button></div>
+    </section>
 
     <div class="demo">
       <p><b>Demo with sample data.</b> Nothing here controls a real home. Disarm code: 1234.</p>
@@ -506,6 +547,8 @@ const CONFIG = {
     disarmAt: "input_datetime.security_morning_disarm",
   },
   thermostat: "climate.thermostat",  // set to null if you don't want it
+  weather: "weather.forecast_home",  // Home Assistant's built-in weather (Settings > Devices > Met.no)
+  comfort: { heat: 68, cool: 78 },   // balanced temperatures for winter and summer
   tempUnit: "°",             // how often the small pictures update
   sensors: [
     { id: "binary_sensor.front_door",          label: "Front door",             x: 119, y: 214 },
@@ -540,6 +583,8 @@ ents["input_boolean.security_night_schedule"]={state:"on",attributes:{}};
 ents["input_boolean.security_morning_disarm"]={state:"off",attributes:{}};
 ents["input_datetime.security_night_arm"]={state:"23:00:00",attributes:{}};
 ents["input_datetime.security_morning_disarm"]={state:"06:30:00",attributes:{}};
+ents["weather.forecast_home"]={state:"partlycloudy",attributes:{temperature:48}};
+ents["sun.sun"]={state:(new Date().getHours()>=7&&new Date().getHours()<17)?"above_horizon":"below_horizon",attributes:{}};
 let listener=null, timers=[];
 const push=()=>{ents={...ents}; listener&&listener(ents)};
 const setS=(id,state)=>{ents[id]={...ents[id],state,last_changed:new Date().toISOString()};push()};
@@ -549,9 +594,10 @@ async function createConnection(){return {addEventListener(){}}}
 async function getUser(){return {name:"Guest"}}
 function subscribeEntities(c,cb){listener=cb;cb(ents)}
 const AL="alarm_control_panel.home_security";
-async function callService(conn,domain,service,data={},target={}){
+async function callService(conn,domain,service,data={},target={},returnResponse){
   await new Promise(r=>setTimeout(r,250));
   const k=domain+"."+service;
+  if(k==="weather.get_forecasts") return {response:{"weather.forecast_home":{forecast:[{condition:"partlycloudy",temperature:54,templow:39}]}}};
   if(k==="alarm_control_panel.alarm_arm_home") setS(AL,"armed_home");
   else if(k==="alarm_control_panel.alarm_arm_away"){ setS(AL,"arming"); if(ents["cover.garage_door"].state==="open"){setS("cover.garage_door","closing");later(3000,()=>setS("cover.garage_door","closed"))} later(5000,()=>ents[AL].state==="arming"&&setS(AL,"armed_away")); }
   else if(k==="alarm_control_panel.alarm_disarm"){ if(data.code!=="1234") throw {message:"Wrong code. In this demo the code is 1234."}; timers.forEach(clearTimeout); timers=[]; setS(AL,"disarmed"); ["binary_sensor.garage_entry_door","binary_sensor.hallway_motion"].forEach(i=>setS(i,"off")); }
@@ -606,12 +652,12 @@ async function connect(interactive) {
     if (isCallback) history.replaceState(null, "", location.pathname);
     conn = await createConnection({ auth });
     userName = (await getUser(conn)).name;
-    $("who").innerHTML = `${greeting()}, <b>${escapeHtml(userName.split(" ")[0])}</b>`;
+    $("who").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
     $("login").classList.add("hidden");
     $("app").classList.remove("hidden");
     conn.addEventListener("disconnected", () => ($("conn").textContent = "Connection lost. Reconnecting…"));
     conn.addEventListener("ready", () => ($("conn").textContent = ""));
-    subscribeEntities(conn, (ents) => { const first = !Object.keys(entities).length; entities = ents; render(); if (first) refreshCams(); watchDoors(first); watchAlarm(); });
+    subscribeEntities(conn, (ents) => { const first = !Object.keys(entities).length; entities = ents; render(); if (first) { refreshCams(); buildBriefing(true); } else scheduleBriefing(); watchDoors(first); watchAlarm(); });
   } catch (err) {
     store.save(null);
     $("loginMsg").textContent =
@@ -849,6 +895,159 @@ document.querySelectorAll("[data-light]").forEach((b) => b.onclick = () => {
   run(`${l.label} light ${on ? "off" : "on"}`, "light", on ? "turn_off" : "turn_on", {}, { entity_id: l.id });
 });
 $("allOff").onclick = () => run("All lights off", "light", "turn_off", {}, { entity_id: CONFIG.lights.map((l) => l.id) });
+
+/* ---------------- daily briefing (greeting, weather, advice, safety) ---------------- */
+const ICONS = {
+  sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  temp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg>',
+  bulb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>',
+  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M12 8v5M12 16h.01"/></svg>',
+};
+const prefs = {
+  get(k, d) { try { const v = localStorage.getItem("hs_" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("hs_" + k, JSON.stringify(v)); } catch {} },
+};
+let forecast = null, forecastAt = 0, briefTimer = 0, spokenText = "";
+const U = () => CONFIG.tempUnit, R = Math.round;
+const CONDITIONS = { "clear-night": "clear", cloudy: "cloudy", fog: "foggy", hail: "hail", lightning: "stormy", "lightning-rainy": "stormy",
+  partlycloudy: "partly cloudy", pouring: "heavy rain", rainy: "rainy", snowy: "snowy", "snowy-rainy": "sleet", sunny: "sunny", windy: "windy", "windy-variant": "windy", exceptional: "unusual weather" };
+
+async function loadForecast() {
+  if (!CONFIG.weather || !entities[CONFIG.weather] || Date.now() - forecastAt < 30 * 60e3) return;
+  forecastAt = Date.now();
+  try {
+    const r = await callService(conn, "weather", "get_forecasts", { type: "daily" }, { entity_id: CONFIG.weather }, true);
+    const resp = r?.response ?? r;
+    forecast = resp?.[CONFIG.weather]?.forecast?.[0] || null;
+  } catch { forecast = null; }
+}
+
+function scheduleBriefing() { clearTimeout(briefTimer); briefTimer = setTimeout(() => buildBriefing(false), 600); }
+
+async function buildBriefing(opening) {
+  await loadForecast();
+  const name = (userName || "").split(" ")[0];
+  $("briefHello").textContent = `${greeting()}${name ? ", " + name : ""}.`;
+  const say = [`${greeting()}${name ? ", " + name : ""}.`];
+  const tips = [];
+
+  // Weather
+  const w = entities[CONFIG.weather];
+  const outside = w?.attributes?.temperature, high = forecast?.temperature, low = forecast?.templow;
+  const cond = CONDITIONS[forecast?.condition || w?.state] || "";
+  if (outside != null) {
+    $("briefWx").innerHTML = `<b>${R(outside)}${U()} outside</b>${cond ? ", " + cond : ""}` +
+      (high != null ? `. Today ${low != null ? R(low) + U() + " to " : "up to "}${R(high)}${U()}.` : ".");
+    say.push(`It's ${R(outside)} degrees outside${cond ? " and " + cond : ""}.` +
+      (high != null ? ` Today's high is ${R(high)}${low != null ? ", with a low of " + R(low) : ""}.` : ""));
+  } else $("briefWx").textContent = "Weather isn't available right now.";
+
+  // Thermostat advice, balanced against the weather
+  const t = entities[CONFIG.thermostat];
+  if (t && outside != null) {
+    const day = high ?? outside, inside = t.attributes.current_temperature;
+    const target = t.attributes.temperature, mode = t.state;
+    let rec = null, text = "", why = "", ok = false;
+    say.push(mode === "off" ? `Inside, it's ${R(inside)} degrees, and your heating and cooling are off.`
+      : `Inside, it's ${R(inside)} degrees, and your thermostat is set to ${target != null ? R(target) : R(t.attributes.target_temp_low) + " to " + R(t.attributes.target_temp_high)} degrees.`);
+    if (day <= 62) { rec = { mode: "heat", temp: CONFIG.comfort.heat }; why = "It's a cold day"; }
+    else if (day >= 80) { rec = { mode: "cool", temp: CONFIG.comfort.cool }; why = "It's a hot day"; }
+    if (rec) {
+      ok = mode === rec.mode && target != null && Math.abs(target - rec.temp) <= 1;
+      text = ok ? `Your thermostat at ${R(target)}${U()} is a good balance for today.`
+                : `${why}. ${rec.mode === "heat" ? "Heat" : "Cool"} to ${rec.temp}${U()} for comfort that saves energy.`;
+      say.push(ok ? `That's a good balance for today.`
+                  : `${why}, so I recommend ${rec.mode === "heat" ? "heating" : "cooling"} to ${rec.temp} degrees inside. It's comfortable and saves energy.`);
+      tips.push({ cls: ok ? "good" : "warn", icon: "temp", text,
+        sub: inside != null ? `Inside it's ${R(inside)}${U()} now.` : "",
+        act: ok ? null : { label: `Set ${rec.temp}${U()}`, run: async () => {
+          if (mode !== rec.mode) await run(`${rec.mode === "heat" ? "Heat" : "Cool"} mode on`, "climate", "set_hvac_mode", { hvac_mode: rec.mode }, { entity_id: CONFIG.thermostat });
+          await run(`Set to ${rec.temp}${U()}`, "climate", "set_temperature", { temperature: rec.temp }, { entity_id: CONFIG.thermostat });
+        } } });
+    } else {
+      ok = mode === "off";
+      tips.push({ cls: ok ? "good" : "warn", icon: "temp",
+        text: ok ? "It's mild today. Heating and cooling are off, which saves the most energy." : "It's mild today. Turn the heat and air off and open a window to save energy.",
+        sub: inside != null ? `Inside it's ${R(inside)}${U()} now.` : "",
+        act: ok ? null : { label: "Turn off", run: () => run("Heating and cooling off", "climate", "set_hvac_mode", { hvac_mode: "off" }, { entity_id: CONFIG.thermostat }) } });
+      say.push(ok ? "It's mild today, so leaving them off saves the most energy."
+                  : "It's mild today. You could turn off the heat and air and open a window to save energy.");
+    }
+  }
+
+  // Lights advice
+  const daylight = entities["sun.sun"] ? entities["sun.sun"].state === "above_horizon" : (new Date().getHours() >= 7 && new Date().getHours() < 18);
+  const insideOn = CONFIG.lights.filter((l) => !l.outside && entities[l.id]?.state === "on");
+  const outsideOn = CONFIG.lights.filter((l) => l.outside && entities[l.id]?.state === "on");
+  const wasteful = daylight ? [...insideOn, ...outsideOn] : insideOn.length > 3 ? insideOn : [];
+  if (wasteful.length) {
+    const names = wasteful.map((l) => l.label);
+    const list = names.length > 3 ? `${names.slice(0, 3).join(", ")} and ${names.length - 3} more` : names.join(", ").replace(/, ([^,]*)$/, " and $1");
+    tips.push({ cls: "warn", icon: "bulb", text: daylight ? `${wasteful.length} light${wasteful.length > 1 ? "s are" : " is"} on in daylight.` : `${wasteful.length} inside lights are on.`,
+      sub: list, act: { label: `Turn off ${wasteful.length}`, run: () => run("Lights off", "light", "turn_off", {}, { entity_id: wasteful.map((l) => l.id) }) } });
+    say.push(`${wasteful.length} light${wasteful.length > 1 ? "s are" : " is"} on${daylight ? " in daylight" : ""}: ${list}. Turning ${wasteful.length > 1 ? "them" : "it"} off will save energy.`);
+  } else {
+    const onCount = insideOn.length + outsideOn.length;
+    tips.push({ cls: "good", icon: "bulb", text: onCount ? "Your lights look good." : "All lights are off.", sub: onCount ? `${onCount} on right now.` : "" });
+    say.push(onCount ? "Your lights look good." : "All the lights are off.");
+  }
+
+  // Safety check
+  const issues = [];
+  CONFIG.locks.forEach((d) => { const st = entities[d.id]?.state; if (st && st !== "locked") issues.push(`${d.label} is ${st === "jammed" ? "jammed" : "unlocked"}`); });
+  CONFIG.sensors.forEach((s) => {
+    const e = entities[s.id]; if (!e) return;
+    const motion = e.attributes?.device_class === "motion" || s.id.includes("motion");
+    if (!motion && (e.state === "on" || e.state === "open")) issues.push(`${s.label} is open`);
+  });
+  const ast = entities[CONFIG.alarm]?.state;
+  if (ast === "triggered") issues.unshift("The alarm is going off");
+  const unlocked = CONFIG.locks.filter((d) => entities[d.id]?.state === "unlocked").map((d) => d.id);
+  if (!issues.length) {
+    const armed = (ast || "").startsWith("armed");
+    tips.push({ cls: "good", icon: "shield", text: "Every door is locked and closed. Everything is safe.",
+      sub: armed ? "The alarm is on." : "The alarm is off." });
+    say.push(`Every door is locked and closed. Everything is safe.${armed ? " The alarm is on." : ""}`);
+  } else {
+    tips.push({ cls: "bad", icon: "alert", text: issues[0] + ".", sub: issues.slice(1).join(". "),
+      act: unlocked.length ? { label: "Lock all", run: () => run("Locking all doors", "lock", "lock", {}, { entity_id: unlocked }) } : null });
+    const spoken = issues.map((x) => /^The /.test(x) ? x : "The " + x.charAt(0).toLowerCase() + x.slice(1));
+    say.push(`Heads up. ${spoken.join(". ")}.${unlocked.length ? " You can lock it from the app." : ""}`);
+  }
+
+  // Draw
+  $("tips").innerHTML = tips.map((t, i) =>
+    `<li class="${t.cls}"><span class="ic">${ICONS[t.icon]}</span><span class="tx">${escapeHtml(t.text)}${t.sub ? `<small>${escapeHtml(t.sub)}</small>` : ""}</span>${t.act ? `<button class="act" data-tip="${i}">${escapeHtml(t.act.label)}</button>` : "<span></span>"}</li>`).join("");
+  $("tips").querySelectorAll("[data-tip]").forEach((b) => b.onclick = async () => { b.disabled = true; await tips[b.dataset.tip].act.run(); });
+
+  spokenText = say.join(" ");
+  if (opening && prefs.get("autoSpeak", true)) speak(true);
+}
+
+/* ---------------- talking ---------------- */
+function speak(auto) {
+  const synth = window.speechSynthesis;
+  if (!synth || !spokenText) { if (!auto) toast("This phone can't read text out loud."); return; }
+  if (synth.speaking) { synth.cancel(); $("speakBtn").classList.remove("talking"); if (!auto) return; }
+  // Phones only allow speech after you've tapped the screen.
+  if (auto && navigator.userActivation && !navigator.userActivation.hasBeenActive) { toast("Tap the speaker to hear your briefing"); return; }
+  const u = new SpeechSynthesisUtterance(spokenText);
+  const voices = synth.getVoices();
+  u.voice = voices.find((v) => /en(-|_)US/i.test(v.lang) && /natural|google|samantha|premium/i.test(v.name)) || voices.find((v) => /^en/i.test(v.lang)) || null;
+  u.rate = 0.98; u.pitch = 1;
+  u.onstart = () => $("speakBtn").classList.add("talking");
+  u.onend = u.onerror = () => $("speakBtn").classList.remove("talking");
+  synth.speak(u);
+}
+$("speakBtn").onclick = () => { unlockAudio(); speak(false); };
+$("autoSpeak").setAttribute("aria-checked", prefs.get("autoSpeak", true));
+$("autoSpeak").onclick = () => {
+  const v = !prefs.get("autoSpeak", true); prefs.set("autoSpeak", v);
+  $("autoSpeak").setAttribute("aria-checked", v); toast(v ? "The app will read your briefing when it opens" : "The app won't read out loud");
+};
+setInterval(() => conn && !document.hidden && buildBriefing(false), 10 * 60e3);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && conn) buildBriefing(true); });
 
 /* ---------------- night schedule ---------------- */
 const hm = (v) => (v || "").slice(0, 5);
