@@ -173,6 +173,8 @@
   .light.on .bulb { background: linear-gradient(180deg, var(--porch-hi), var(--porch)); color: #1d160a;
     box-shadow: 0 0 22px -2px rgba(243,223,182,.7); }
   .light.gone { opacity: .5; }
+  .lights-group { color: var(--haze); font-size: 14px; font-weight: 600; margin: 18px 0 10px; }
+  .lights-group:first-child { margin-top: 0; }
 
   /* ---------------- help ---------------- */
   .help { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -375,7 +377,7 @@
 
     <section class="block" id="lightsBlock">
       <div class="lights-head"><h2>Lights</h2><button class="ghost" id="allOff">Turn all off</button></div>
-      <div class="lights" id="lights"></div>
+      <div id="lights"></div>
     </section>
 
     <section class="block">
@@ -456,9 +458,11 @@ const CONFIG = {
     { id: "light.living_room", label: "Living room" },
     { id: "light.kitchen",     label: "Kitchen" },
     { id: "light.shoe_hall",   label: "Shoe hall" },
-    { id: "light.porch",       label: "Porch" },
     { id: "light.garage",      label: "Garage" },
     { id: "light.bedroom",     label: "Bedroom" },
+    { id: "light.porch",              label: "Porch",             outside: true },
+    { id: "light.front_yard_garden",  label: "Front yard garden", outside: true },
+    { id: "light.back_yard_garden",   label: "Back yard garden",  outside: true },
   ],
   thermostat: "climate.thermostat",  // set to null if you don't want it
   tempUnit: "°",             // how often the small pictures update
@@ -488,7 +492,7 @@ let ents={
  "binary_sensor.hallway_motion":{state:"off",attributes:{device_class:"motion"}}};
 ["front_porch","driveway","garage","backyard"].forEach((n,i)=>ents["camera."+n]={state:"idle",attributes:{entity_picture:CAMS[i]}});
 ents["climate.thermostat"]={state:"heat",attributes:{current_temperature:69,temperature:72,hvac_action:"heating",hvac_modes:["heat","cool","heat_cool","off"]}};
-[["living_room",204],["kitchen",255],["shoe_hall",0],["porch",153],["garage",0],["bedroom",0]].forEach(([n,b])=>ents["light."+n]={state:b?"on":"off",attributes:b?{brightness:b}:{}});
+[["living_room",204],["kitchen",255],["shoe_hall",0],["porch",153],["garage",0],["bedroom",0],["front_yard_garden",178],["back_yard_garden",0]].forEach(([n,b])=>ents["light."+n]={state:b?"on":"off",attributes:b?{brightness:b}:{}});
 let listener=null, timers=[];
 const push=()=>{ents={...ents}; listener&&listener(ents)};
 const setS=(id,state)=>{ents[id]={...ents[id],state,last_changed:new Date().toISOString()};push()};
@@ -705,10 +709,15 @@ if (CONFIG.garage) {
 /* ---------------- lights ---------------- */
 const BULB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>';
 if (!CONFIG.lights.length) $("lightsBlock").remove();
-$("lights").innerHTML = CONFIG.lights.map((l, i) =>
+const tile = (l, i) =>
   `<button class="light" id="light${i}" data-light="${i}" aria-pressed="false">
      <span class="bulb">${BULB}</span><span><span class="nm">${escapeHtml(l.label)}</span><span class="st">…</span></span>
-   </button>`).join("");
+   </button>`;
+const groupHtml = (title, outside) => {
+  const items = CONFIG.lights.map((l, i) => [l, i]).filter(([l]) => !!l.outside === outside);
+  return items.length ? `<div class="lights-group">${title}</div><div class="lights">${items.map(([l, i]) => tile(l, i)).join("")}</div>` : "";
+};
+$("lights").innerHTML = groupHtml("Inside", false) + groupHtml("Outside", true);
 document.querySelectorAll("[data-light]").forEach((b) => b.onclick = () => {
   const l = CONFIG.lights[b.dataset.light], e = entities[l.id];
   if (!e || e.state === "unavailable") return toast(`${l.label} light is offline`);
