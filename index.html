@@ -627,7 +627,7 @@
       <div class="card" id="people"></div>
       <div class="card" style="margin-top:10px">
         <button class="srow" id="manageUsers"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.3-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.7 2.5 3 5.2"/></svg></span><span class="stxt"><b>Manage users</b><span>Add family, choose who is an admin, remove access</span></span><span class="chev">›</span></button>
-        <button class="srow" id="manageCodes"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7.5" cy="15.5" r="4"/><path d="m10.5 12.5 9-9M16 6l3 3M14 8l2 2"/></svg></span><span class="stxt"><b>Alarm and door codes</b><span>Change codes on the panel and the Kwikset lock</span></span><span class="chev">›</span></button>
+        <button class="srow" id="manageCodes"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7.5" cy="15.5" r="4"/><path d="m10.5 12.5 9-9M16 6l3 3M14 8l2 2"/></svg></span><span class="stxt"><b>Alarm and door codes</b><span>Change codes on the panel and both door locks</span></span><span class="chev">›</span></button>
       </div>
     </section>
 
@@ -665,7 +665,8 @@
       <div class="card">
         <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg></span><span class="stxt"><b>Home Security</b><span>Version 1.0</span></span></div>
         <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7 15h10" stroke-linecap="round"/></svg></span><span class="stxt"><b>Alarm panel</b><span>Qolsys IQ Panel 2, software 2.8.1</span></span></div>
-        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="stxt"><b>Front door lock</b><span>Kwikset Home Connect, Z-Wave Plus</span></span></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="stxt"><b>Front door lock</b><span>Schlage smart lock</span></span></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="stxt"><b>Back door lock</b><span>Kwikset Home Connect, Z-Wave Plus</span></span></div>
       </div>
     </section>
 
@@ -698,8 +699,8 @@ const CONFIG = {
   alarm: "alarm_control_panel.home_security",
   // Every door with a smart lock. Hold a lock 2 seconds to unlock it, tap to lock it.
   locks: [
-    { id: "lock.front_door",        label: "Front door",             sensor: "binary_sensor.front_door" },  // Kwikset Home Connect
-    { id: "lock.garage_entry_door", label: "Garage door to hallway", sensor: "binary_sensor.garage_door" },  // remove if no smart lock
+    { id: "lock.front_door",        label: "Front door",             sensor: "binary_sensor.front_door" },  // Schlage
+    { id: "lock.garage_entry_door", label: "Back door to garage",    sensor: "binary_sensor.garage_door" },  // Kwikset Home Connect 450126VHC
   ],
   responderLock: "lock.front_door",  // the door the alarm screen offers to unlock for responders
   garage: "cover.garage_door",       // set to null if you have no garage opener
@@ -744,7 +745,7 @@ const CONFIG = {
     // Names come from your Qolsys panel (Settings > Advanced > Edit Sensor).
     // Confirm the exact entity IDs once the panel is connected to Home Assistant.
     { id: "binary_sensor.front_door",          label: "Front door",             x: 119, y: 214 },
-    { id: "binary_sensor.garage_door",         label: "Garage door to hallway", x: 90,  y: 190 },
+    { id: "binary_sensor.garage_door",         label: "Back door to garage",     x: 90,  y: 190 },
     { id: "binary_sensor.patio_door",          label: "Patio door",             x: 220, y: 214 },
     { id: "binary_sensor.left_bedroom_window", label: "Left bedroom window",    x: 290, y: 154 },
     { id: "binary_sensor.motion_detector",     label: "Motion detector",        x: 135, y: 150 },
@@ -1490,7 +1491,7 @@ function renderSettings() {
     ["Alarm panel", "Qolsys IQ Panel 2", ok(alarm && alarm.state !== "unavailable")],
     ["Home Assistant", "Your home hub", ok(!!conn)],
     ["Weather", "Daily forecast", ok(!!entities[CONFIG.weather])],
-    ["Front door lock", "Kwikset", ok(entities[CONFIG.responderLock] && entities[CONFIG.responderLock].state !== "unavailable")],
+    ...CONFIG.locks.map((d) => [d.label + " lock", d.id === "lock.front_door" ? "Schlage" : "Kwikset", ok(entities[d.id] && entities[d.id].state !== "unavailable")]),
   ].map(([a, b, c]) => `<div class="srow"><span class="stxt"><b>${a}</b><span>${b}</span></span><span class="sval">${c}</span></div>`).join("");
 }
 document.querySelectorAll("[data-pref]").forEach((b) => b.onclick = () => {
@@ -1500,7 +1501,7 @@ document.querySelectorAll("[data-pref]").forEach((b) => b.onclick = () => {
   toast({ sound: "Sound", vibrate: "Vibration", autoSpeak: "Talking briefing", chimeOff: "Door chime" }[k] + (v ? " on" : " off"));
 });
 $("manageUsers").onclick = () => { location.href = (CONFIG.hassUrl || location.origin).replace(/\/$/, "") + "/config/person"; };
-$("manageCodes").onclick = () => toast("Change the alarm code on the panel (Settings > User Management) and the door code on the Kwikset keypad.");
+$("manageCodes").onclick = () => toast("Change the alarm code on the panel (Settings > User Management). Door codes are set on the Schlage and Kwikset keypads.");
 $("goNight").onclick = () => { closeSettings(); setTimeout(() => $("nightBlock").scrollIntoView({ behavior: "smooth" }), 350); };
 
 // System test (walk test)
@@ -1715,7 +1716,7 @@ function askPin(title) {
 
 setInterval(() => conn && render(), 30000);
 connect(false);
-$("simBtn").onclick = () => { window.__simulateBreakIn(); toast("Garage door to the hallway opened. Disarm with 1234, or wait."); window.scrollTo({ top: 0, behavior: "smooth" }); };
+$("simBtn").onclick = () => { window.__simulateBreakIn(); toast("Back door to the garage opened. Disarm with 1234, or wait."); window.scrollTo({ top: 0, behavior: "smooth" }); };
 $("leakBtn").onclick = () => { window.__simulateLeak(); window.scrollTo({ top: 0, behavior: "smooth" }); };
 $("walkList").addEventListener("click", (e) => { const r = e.target.closest("[data-id]"); if (r) window.__openDoor(r.dataset.id); });
 $("fireBtn").onclick = () => { window.__simulateFire(); window.scrollTo({ top: 0, behavior: "smooth" }); };
