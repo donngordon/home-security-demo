@@ -235,6 +235,26 @@
   .wrow .nm { flex: 1; } .wrow small { color: var(--haze); }
   .wrow.passed small { color: var(--porch-hi); }
 
+  /* ---------------- confirm sheet ---------------- */
+  .confirm { position: fixed; inset: 0; z-index: 40; display: none; align-items: flex-end; justify-content: center;
+    background: rgba(6,9,18,.72); backdrop-filter: blur(6px); padding: 16px 16px calc(env(safe-area-inset-bottom) + 16px); }
+  .confirm.open { display: flex; animation: cf-fade .2s ease-out; }
+  @keyframes cf-fade { from { opacity: 0; } }
+  .cf-card { width: min(100%, 420px); text-align: center; padding: 26px 22px 14px; border-radius: 28px;
+    background: linear-gradient(180deg, #1d2642, #121a2e); border: 1px solid rgba(217,183,126,.32);
+    box-shadow: 0 -20px 60px -20px rgba(0,0,0,.8); animation: cf-up .28s cubic-bezier(.2,.8,.2,1); }
+  @keyframes cf-up { from { transform: translateY(40px); } }
+  .cf-ico { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 50%; display: grid; place-items: center; color: #1d160a;
+    background: linear-gradient(180deg, var(--porch-hi), var(--porch)); box-shadow: 0 12px 30px -10px rgba(217,183,126,.8); }
+  .cf-ico svg { width: 30px; height: 30px; }
+  .confirm.danger .cf-ico { background: linear-gradient(180deg, #ff9d93, var(--flare)); color: #2a0b08; box-shadow: 0 12px 30px -10px rgba(255,107,94,.8); }
+  .cf-card h2 { font-size: 30px; }
+  .cf-card p { color: var(--haze); margin: 8px auto 20px; max-width: 32ch; }
+  .cf-yes { display: block; width: 100%; padding: 17px; border-radius: 18px; font-weight: 700; font-size: 17px; color: #1d160a;
+    background: linear-gradient(180deg, var(--porch-hi), var(--porch)); box-shadow: inset 0 1px 0 rgba(255,255,255,.6); }
+  .confirm.danger .cf-yes { color: #fff; background: linear-gradient(180deg, #ff7e72, #e2493d); }
+  .cf-no { display: block; width: 100%; padding: 14px; margin-top: 6px; color: var(--haze); font-weight: 600; }
+
   /* ---------------- night schedule ---------------- */
   .sched { border-radius: 22px; background: var(--glass); border: 1px solid var(--hair); box-shadow: var(--lift); padding: 4px 16px; }
   .sched .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--hair); }
@@ -582,7 +602,7 @@
         <button class="hold" data-dispatch="fire"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M12 21c-3.6 0-6-2.5-6-5.8 0-3.8 3.4-5.6 3.8-9.7 2.8 1.9 4 4.4 3.6 6.6 1-.6 1.8-1.7 2-2.9 1.6 1.6 2.6 3.7 2.6 6 0 3.3-2.4 5.8-6 5.8z"/></svg></span><span>Fire</span></button>
         <button class="hold" data-dispatch="medical"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M9.5 3.5h5v6h6v5h-6v6h-5v-6h-6v-5h6z"/></svg></span><span>Medical</span></button>
       </div>
-      <p class="note">Hold a button for 2 seconds. Noonlight calls you to confirm, then sends help. If a life is in danger, call 911 as well.</p>
+      <p class="note">Tap a button, then confirm. Noonlight calls you to confirm, then sends help. If a life is in danger, call 911 as well.</p>
     </section>
 
     <section class="block">
@@ -608,12 +628,12 @@
   <div class="sheet">
     <h2>Your alarm is going off</h2>
     <p>Unlock the front door so police, firefighters or paramedics can get in.</p>
-    <button class="dial locked" id="alarmDial" aria-label="Hold to unlock the front door">
+    <button class="dial locked" id="alarmDial" aria-label="Unlock the front door">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
       </svg>
     </button>
-    <div class="hint">Hold for 2 seconds to unlock</div>
+    <div class="hint">Tap to unlock</div>
     <button class="cancel" id="alarmLater" autofocus>Keep it locked</button>
   </div>
 </dialog>
@@ -681,7 +701,7 @@
     <section class="set-group">
       <h3>About</h3>
       <div class="card">
-        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg></span><span class="stxt"><b>Home Security</b><span>Version 1.0</span></span></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg></span><span class="stxt"><b>Home Security</b><span>Version 1.2</span></span></div>
         <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7 15h10" stroke-linecap="round"/></svg></span><span class="stxt"><b>Alarm panel</b><span>Qolsys IQ Panel 2, software 2.8.1</span></span></div>
         <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="stxt"><b>Front door lock</b><span>Schlage smart lock</span></span></div>
         <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="stxt"><b>Back door lock</b><span>Kwikset Home Connect, Z-Wave Plus</span></span></div>
@@ -701,6 +721,16 @@
     <p class="note" id="walkCount" style="margin:0 0 6px"></p>
     <div id="walkList"></div>
     <button class="cancel" id="walkDone">Finish test</button>
+  </div>
+</div>
+
+<div class="confirm" id="confirm" role="dialog" aria-modal="true" aria-labelledby="cfTitle">
+  <div class="cf-card">
+    <div class="cf-ico" id="cfIco"></div>
+    <h2 id="cfTitle"></h2>
+    <p id="cfText"></p>
+    <button class="cf-yes" id="cfYes"></button>
+    <button class="cf-no" id="cfNo">Cancel</button>
   </div>
 </div>
 
@@ -946,8 +976,8 @@ function render() {
     dial.disabled = !["locked", "unlocked", "open"].includes(ls);
     $("shackle" + i).setAttribute("d", locked ? "M8 11V7a4 4 0 0 1 8 0v4" : "M8 11V7a4 4 0 0 1 7.5-1.8");
     $("lockText" + i).textContent = { locked: "Locked", unlocked: "Unlocked", open: "Open", locking: "Locking…", unlocking: "Unlocking…", jammed: "Jammed" }[ls] || "Offline";
-    $("lockHow" + i).textContent = locked ? "Hold for 2 seconds to unlock." : ls === "jammed" ? "Check the door by hand." : dial.disabled ? "The lock isn't responding." : "Tap to lock.";
-    dial.setAttribute("aria-label", (locked ? "Hold to unlock " : "Lock ") + d.label);
+    $("lockHow" + i).textContent = locked ? "Tap to unlock." : ls === "jammed" ? "Check the door by hand." : dial.disabled ? "The lock isn't responding." : "Tap to lock.";
+    dial.setAttribute("aria-label", (locked ? "Unlock " : "Lock ") + d.label);
     const sens = d.sensor ? entities[d.sensor] : null, ajar = sens?.state === "on";
     if (ajar && !locked) $("lockHow" + i).textContent = "The door is open. Close it, then tap to lock.";
     $("lockSub" + i).textContent = (sens ? (ajar ? "Door is open. " : "Door is closed. ") : "") + (l ? "Changed " + ago(l.last_changed) : "");
@@ -963,8 +993,8 @@ function render() {
     $("garageDial").disabled = !["open", "closed"].includes(gs);
     $("slats").style.opacity = shut ? 1 : .25;
     $("garageText").textContent = { open: "Open", closed: "Closed", opening: "Opening…", closing: "Closing…" }[gs] || "Offline";
-    $("garageHow").textContent = shut ? "Hold the door for 2 seconds to open it." : gs === "open" ? "Tap the door to close it." : $("garageDial").disabled && !gs.endsWith("ing") ? "The garage opener isn't responding." : "Wait for the door to stop moving.";
-    $("garageDial").setAttribute("aria-label", shut ? "Hold to open the garage" : "Close the garage");
+    $("garageHow").textContent = shut ? "Tap to open." : gs === "open" ? "Tap to close." : $("garageDial").disabled && !gs.endsWith("ing") ? "The garage opener isn't responding." : "Wait for the door to stop moving.";
+    $("garageDial").setAttribute("aria-label", shut ? "Open the garage" : "Close the garage");
     $("garageSub").textContent = g ? "Changed " + ago(g.last_changed) : "";
   }
 
@@ -1107,7 +1137,23 @@ $("modeOff").onclick = async () => {
 const unlockForResponders = () =>
   run("Front door unlocked for responders", "script", "security_unlock_for_responders", { requested_by: userName });
 
-// Doors: one dial per lock. Hold to unlock when locked, tap to lock when unlocked.
+/* ---------------- confirm sheet (tap, then confirm: works on every phone) ---------------- */
+const ICO_UNLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 7.5-1.8"/></svg>';
+const ICO_GARAGE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-6h10v6"/></svg>';
+const ICO_HELP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M12 8v5M12 16h.01" stroke-linecap="round"/></svg>';
+function confirmSheet({ title, text, yes, icon, danger = false }) {
+  return new Promise((resolve) => {
+    const box = $("confirm");
+    $("cfTitle").textContent = title; $("cfText").textContent = text; $("cfYes").textContent = yes; $("cfIco").innerHTML = icon;
+    box.classList.toggle("danger", danger); box.classList.add("open"); buzz(30);
+    const done = (v) => { box.classList.remove("open"); $("cfYes").onclick = $("cfNo").onclick = box.onclick = null; resolve(v); };
+    $("cfYes").onclick = () => done(true);
+    $("cfNo").onclick = () => done(false);
+    box.onclick = (e) => { if (e.target === box) done(false); };
+  });
+}
+
+// Doors: tap a locked door to unlock (after confirming); tap an unlocked door to lock it.
 const LOCK_ICON = (i) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
   <rect x="4" y="11" width="16" height="10" rx="2.5"/><path id="shackle${i}" d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
 $("doors").innerHTML = CONFIG.locks.map((d, i) =>
@@ -1122,9 +1168,12 @@ $("doors").innerHTML = CONFIG.locks.map((d, i) =>
    </div>`).join("");
 CONFIG.locks.forEach((d, i) => {
   const dial = $("lockDial" + i);
-  holdable(dial, () => run(`${d.label} unlocked`, "lock", "unlock", {}, { entity_id: d.id }), () => dial.classList.contains("locked"));
-  dial.addEventListener("click", () => {
-    if (!dial.classList.contains("locked") && !dial.disabled) run(`${d.label} locked`, "lock", "lock", {}, { entity_id: d.id });
+  dial.addEventListener("click", async () => {
+    if (dial.disabled) return toast(`${d.label} lock isn't responding`);
+    if (dial.classList.contains("locked")) {
+      const ok = await confirmSheet({ title: `Unlock ${d.label.toLowerCase()}?`, text: "Anyone can open the door once it's unlocked.", yes: "Unlock", icon: ICO_UNLOCK });
+      if (ok) run(`${d.label} unlocked`, "lock", "unlock", {}, { entity_id: d.id });
+    } else run(`${d.label} locked`, "lock", "lock", {}, { entity_id: d.id });
   });
 });
 $("fireFalse").onclick = () => {
@@ -1133,15 +1182,17 @@ $("fireFalse").onclick = () => {
 };
 $("fireCall").onclick = () => { $("fireNote").textContent = "Dial 911 on your phone now."; location.href = "tel:911"; };
 $("lockAll").onclick = () => run("Locking all doors", "lock", "lock", {}, { entity_id: CONFIG.locks.map((d) => d.id) });
-holdable($("alarmDial"), async () => { $("alarmDlg").close(); await unlockForResponders(); });
+$("alarmDial").addEventListener("click", async () => { $("alarmDlg").close(); await unlockForResponders(); });
 $("alarmLater").onclick = () => $("alarmDlg").close();
 
 if (CONFIG.garage) {
-  holdable($("garageDial"), () => run("Opening the garage", "cover", "open_cover", {}, { entity_id: CONFIG.garage }),
-    () => $("garageDial").classList.contains("locked"));
-  $("garageDial").addEventListener("click", () => {
-    if (!$("garageDial").classList.contains("locked") && !$("garageDial").disabled)
-      run("Closing the garage", "cover", "close_cover", {}, { entity_id: CONFIG.garage });
+  $("garageDial").addEventListener("click", async () => {
+    const g = $("garageDial");
+    if (g.disabled) return toast("The garage door is moving or not responding");
+    if (g.classList.contains("locked")) {
+      const ok = await confirmSheet({ title: "Open the garage?", text: "Make sure nothing is under the door.", yes: "Open garage", icon: ICO_GARAGE });
+      if (ok) run("Opening the garage", "cover", "open_cover", {}, { entity_id: CONFIG.garage });
+    } else run("Closing the garage", "cover", "close_cover", {}, { entity_id: CONFIG.garage });
   });
 } else $("garageBlock").remove();
 
@@ -1671,7 +1722,11 @@ setInterval(() => conn && !document.hidden && refreshCams(), CONFIG.cameraRefres
 
 document.querySelectorAll("[data-dispatch]").forEach((btn) => {
   const kind = btn.dataset.dispatch;
-  holdable(btn, () => run(`Help requested: ${kind}`, "script", "security_dispatch", { service_type: kind }));
+  btn.addEventListener("click", async () => {
+    const who = { police: "police", fire: "the fire department", medical: "an ambulance" }[kind];
+    const ok = await confirmSheet({ title: `Send ${who}?`, text: "Noonlight will call you to confirm, then send help. If a life is in danger, also call 911.", yes: `Request ${kind === "medical" ? "medical help" : kind}`, icon: ICO_HELP, danger: true });
+    if (ok) run(`Help requested: ${kind}`, "script", "security_dispatch", { service_type: kind });
+  });
 });
 
 /* ---------------- hold-to-confirm ---------------- */
