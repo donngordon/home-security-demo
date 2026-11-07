@@ -127,6 +127,18 @@
   .door.compact .what { font-size: 29px; }
   .door .name { font-weight: 600; font-size: 15px; color: var(--paper); margin-bottom: 2px; }
 
+  /* ---------------- fire / CO banner ---------------- */
+  body[data-fire] { --state: var(--flare); }
+  body[data-fire] #house .shell { animation: alarm 1.1s ease-in-out infinite; }
+  .fire { display: none; margin: 12px 0; padding: 18px; border-radius: 22px; text-align: center;
+    background: linear-gradient(180deg, #5a1a22, #36101a); border: 1px solid rgba(255,107,94,.45); box-shadow: 0 0 40px -8px rgba(255,90,78,.6); }
+  body[data-fire] .fire { display: block; animation: pulse-red 1.2s ease-in-out infinite; }
+  @keyframes pulse-red { 50% { box-shadow: 0 0 60px -4px rgba(255,90,78,.85); } }
+  .fire h2 { font-size: 34px; }
+  .fire p { color: #f6cfcf; margin-top: 6px; }
+  .fire .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .fire .row2 button { padding: 13px; border-radius: 14px; font-weight: 700; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); }
+
   /* ---------------- daily briefing ---------------- */
   .brief { margin: 10px 0 4px; padding: 20px 18px 8px; border-radius: 24px; background: var(--glass);
     border: 1px solid var(--hair); box-shadow: var(--lift); }
@@ -330,6 +342,16 @@
       <button class="ghost" id="logoutBtn">Sign out</button>
     </div>
 
+    <section class="fire" id="fireBox" role="alert">
+      <h2 id="fireTitle">Smoke detected</h2>
+      <p id="fireText">Get everyone out of the house now. Noonlight has been asked to send the fire department and will call you.</p>
+      <div class="row2">
+        <button id="fireFalse">It's just cooking</button>
+        <button id="fireCall">Call 911</button>
+      </div>
+      <p id="fireNote" style="font-size:13px;margin-top:10px"></p>
+    </section>
+
     <section class="brief" id="brief" aria-live="polite">
       <div class="brief-top">
         <div>
@@ -347,7 +369,7 @@
 
     <div class="demo">
       <p><b>Demo with sample data.</b> Nothing here controls a real home. Disarm code: 1234.</p>
-      <button id="simBtn">Try a break-in</button>
+      <span style="display:grid;gap:6px"><button id="simBtn">Try a break-in</button><button id="fireBtn">Try a kitchen fire</button></span>
     </div>
     <div class="wxdemo" role="group" aria-label="Preview the weather background">
       <span>Preview weather:</span>
@@ -555,6 +577,11 @@ const CONFIG = {
     disarmEnabled: "input_boolean.security_morning_disarm",
     disarmAt: "input_datetime.security_morning_disarm",
   },
+  // Smoke and carbon monoxide detectors: always watched, even when the alarm is off.
+  smoke: [
+    { id: "binary_sensor.smoke_detector", label: "Kitchen smoke detector", kind: "smoke" },
+    { id: "binary_sensor.co_detector",    label: "Carbon monoxide detector", kind: "co" },
+  ],
   thermostat: "climate.thermostat",  // set to null if you don't want it
   weather: "weather.forecast_home",  // Home Assistant's built-in weather (Settings > Devices > Met.no)
   comfort: { heat: 68, cool: 78 },   // balanced temperatures for winter and summer
@@ -597,6 +624,9 @@ const WX={sunny:[84,88,70],partlycloudy:[66,70,55],cloudy:[56,59,47],rainy:[52,5
 window.__setWeather=(c)=>{const [t,h,l]=WX[c]; ents["weather.forecast_home"]={state:c,attributes:{temperature:t,high:h,low:l},last_changed:new Date().toISOString()};
   ents["sun.sun"]={state:c==="clear-night"?"below_horizon":"above_horizon",attributes:{}}; push();};
 ents["sun.sun"]={state:(new Date().getHours()>=7&&new Date().getHours()<17)?"above_horizon":"below_horizon",attributes:{}};
+ents["binary_sensor.smoke_detector"]={state:"off",attributes:{device_class:"smoke"}};
+ents["binary_sensor.co_detector"]={state:"off",attributes:{device_class:"carbon_monoxide"}};
+window.__simulateFire=()=>{ setS("binary_sensor.smoke_detector","on"); };
 let listener=null, timers=[];
 const push=()=>{ents={...ents}; listener&&listener(ents)};
 const setS=(id,state)=>{ents[id]={...ents[id],state,last_changed:new Date().toISOString()};push()};
@@ -618,6 +648,7 @@ async function callService(conn,domain,service,data={},target={},returnResponse)
   else if(k==="script.security_unlock_for_responders"){ setS("lock.front_door","unlocking"); later(1500,()=>setS("lock.front_door","unlocked")); }
   else if(k==="input_boolean.toggle"){ const id=target.entity_id; setS(id, ents[id].state==="on"?"off":"on"); }
   else if(k==="input_datetime.set_datetime"){ setS(target.entity_id, data.time); }
+  else if(k==="siren.turn_off"){ later(2500,()=>setS("binary_sensor.smoke_detector","off")); }
   else if(domain==="light"){ [].concat(target.entity_id).forEach(id=>{ ents[id]={...ents[id],state:service==="turn_on"?"on":"off",attributes:service==="turn_on"?{brightness:255}:{}}; }); push(); }
   else if(k==="climate.set_temperature"){ const c=ents["climate.thermostat"],a={...c.attributes,temperature:data.temperature};
     a.hvac_action=c.state==="heat"?(a.current_temperature<a.temperature?"heating":"idle"):c.state==="cool"?(a.current_temperature>a.temperature?"cooling":"idle"):"idle";
@@ -669,7 +700,7 @@ async function connect(interactive) {
     $("app").classList.remove("hidden");
     conn.addEventListener("disconnected", () => ($("conn").textContent = "Connection lost. Reconnecting…"));
     conn.addEventListener("ready", () => ($("conn").textContent = ""));
-    subscribeEntities(conn, (ents) => { const first = !Object.keys(entities).length; entities = ents; render(); if (first) { refreshCams(); buildBriefing(true); } else scheduleBriefing(); watchDoors(first); watchAlarm(); });
+    subscribeEntities(conn, (ents) => { const first = !Object.keys(entities).length; entities = ents; render(); if (first) { refreshCams(); buildBriefing(true); } else scheduleBriefing(); watchDoors(first); watchAlarm(); watchFire(); });
   } catch (err) {
     store.save(null);
     $("loginMsg").textContent =
@@ -750,6 +781,18 @@ function render() {
     $("garageSub").textContent = g ? "Changed " + ago(g.last_changed) : "";
   }
 
+  // Smoke / CO
+  const fires = CONFIG.smoke.filter((d) => entities[d.id]?.state === "on");
+  if (fires.length) {
+    document.body.dataset.fire = "";
+    const co = fires.every((d) => d.kind === "co");
+    $("fireTitle").textContent = co ? "Carbon monoxide detected" : "Smoke detected";
+    $("fireText").textContent = (co ? "Get everyone outside into fresh air now. " : "Get everyone out of the house now. ") +
+      `${fires.map((d) => d.label).join(" and ")} went off. Noonlight has been asked to send the fire department and will call you.`;
+    $("statusText").textContent = co ? "Carbon monoxide alarm" : "Fire alarm";
+    $("statusSub").textContent = "Leave the house. Help is on the way.";
+  } else delete document.body.dataset.fire;
+
   // Night schedule
   renderNight();
 
@@ -803,6 +846,12 @@ function playSound(kind) {
     else if (kind === "warning") { for (let i = 0; i < 4; i++) { tone(988, i * 0.45, 0.3, 0.35, "square"); } }
     else if (kind === "alarm") { for (let i = 0; i < 8; i++) { tone(i % 2 ? 740 : 1046, i * 0.38, 0.34, 0.4, "sawtooth"); } }
   } catch {}
+}
+let fireWasOn = false;
+function watchFire() {
+  const on = CONFIG.smoke.some((d) => entities[d.id]?.state === "on");
+  if (on && !fireWasOn) { playSound("alarm"); try { navigator.vibrate?.([900, 200, 900, 200, 900, 200, 900]); } catch {} }
+  fireWasOn = on;
 }
 let lastAlarmState = null;
 function watchAlarm() {
@@ -875,6 +924,11 @@ CONFIG.locks.forEach((d, i) => {
     if (!dial.classList.contains("locked") && !dial.disabled) run(`${d.label} locked`, "lock", "lock", {}, { entity_id: d.id });
   });
 });
+$("fireFalse").onclick = () => {
+  $("fireNote").textContent = "When Noonlight calls, tell them your PIN and that it was cooking. They'll cancel. Then clear the smoke and press the detector's button to silence it.";
+  run("Siren off", "siren", "turn_off", {}, { entity_id: "all" });
+};
+$("fireCall").onclick = () => { $("fireNote").textContent = "Dial 911 on your phone now."; location.href = "tel:911"; };
 $("lockAll").onclick = () => run("Locking all doors", "lock", "lock", {}, { entity_id: CONFIG.locks.map((d) => d.id) });
 holdable($("alarmDial"), async () => { $("alarmDlg").close(); await unlockForResponders(); });
 $("alarmLater").onclick = () => $("alarmDlg").close();
@@ -1396,6 +1450,7 @@ function askPin(title) {
 setInterval(() => conn && render(), 30000);
 connect(false);
 $("simBtn").onclick = () => { window.__simulateBreakIn(); toast("Garage door to the hallway opened. Disarm with 1234, or wait."); window.scrollTo({ top: 0, behavior: "smooth" }); };
+$("fireBtn").onclick = () => { window.__simulateFire(); window.scrollTo({ top: 0, behavior: "smooth" }); };
 document.querySelectorAll("[data-wx]").forEach((b) => b.onclick = () => window.__setWeather(b.dataset.wx));
 </script>
 <script>
