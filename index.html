@@ -171,6 +171,69 @@
     border-top: 1px solid var(--hair); color: var(--haze); font-size: 14px; }
   .brief .auto .switch { transform: scale(.85); transform-origin: right center; }
 
+  /* ---------------- settings ---------------- */
+  .gear { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: var(--porch-hi);
+    background: var(--glass); border: 1px solid rgba(217,183,126,.35); box-shadow: 0 8px 22px -12px rgba(217,183,126,.7); }
+  .gear svg { width: 20px; height: 20px; }
+  .settings { position: fixed; inset: 0; z-index: 20; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    background: radial-gradient(90% 45% at 50% -5%, rgba(217,183,126,.16), transparent 70%), linear-gradient(180deg, #121a2e, #0a0f1c 70%);
+    transform: translateX(100%); transition: transform .42s cubic-bezier(.2,.8,.2,1); visibility: hidden;
+    padding: calc(env(safe-area-inset-top) + 6px) 20px calc(env(safe-area-inset-bottom) + 40px); }
+  .settings.open { transform: none; visibility: visible; }
+  .settings .inner { max-width: 460px; margin: 0 auto; }
+  .set-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between;
+    margin: 0 -20px; padding: 12px 20px; backdrop-filter: blur(14px); background: rgba(13,19,34,.6); }
+  .set-head h1 { font-size: 30px; }
+  .done { padding: 9px 16px; border-radius: 99px; font-weight: 700; font-size: 14px; color: #1d160a;
+    background: linear-gradient(180deg, var(--porch-hi), var(--porch)); }
+  .profile { position: relative; overflow: hidden; margin: 14px 0 6px; padding: 24px 20px; border-radius: 26px; text-align: center;
+    background: linear-gradient(160deg, rgba(243,223,182,.14), rgba(255,255,255,.03) 45%, rgba(217,183,126,.08));
+    border: 1px solid rgba(217,183,126,.32); box-shadow: var(--lift); }
+  .profile::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, rgba(217,183,126,.05) 0 1px, transparent 1px 14px); pointer-events: none; }
+  .mono { width: 86px; height: 86px; margin: 0 auto 12px; border-radius: 50%; display: grid; place-items: center; position: relative;
+    font: 400 36px var(--display); color: var(--porch-hi); background: radial-gradient(circle at 50% 35%, #222b45, #10172a);
+    box-shadow: 0 0 0 2px #0f1628, 0 0 0 4px rgba(217,183,126,.85), 0 16px 34px -14px rgba(217,183,126,.8); }
+  .profile h2 { font-size: 30px; position: relative; }
+  .role { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 5px 12px; border-radius: 99px; font-size: 12.5px;
+    font-weight: 700; letter-spacing: .04em; color: #1d160a; background: linear-gradient(180deg, var(--porch-hi), var(--porch)); position: relative; }
+  .role.member { color: var(--paper); background: rgba(255,255,255,.08); border: 1px solid var(--hair); }
+  .set-group { margin-top: 26px; }
+  .set-group > h3 { font: 400 22px var(--display); margin: 0 4px 10px; color: var(--paper); }
+  .set-group > h3 small { font: 500 12px var(--ui); color: var(--porch); margin-left: 8px; vertical-align: middle; }
+  .card { border-radius: 22px; background: var(--glass); border: 1px solid var(--hair); box-shadow: var(--lift); overflow: hidden; }
+  .srow { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; text-align: left; border-top: 1px solid var(--hair); }
+  .srow:first-child { border-top: 0; }
+  button.srow:active { background: rgba(255,255,255,.04); }
+  .sico { flex: none; width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; color: var(--porch-hi);
+    background: linear-gradient(160deg, rgba(243,223,182,.2), rgba(217,183,126,.06)); border: 1px solid rgba(217,183,126,.25); }
+  .sico svg { width: 18px; height: 18px; }
+  .stxt { flex: 1; min-width: 0; }
+  .stxt b { display: block; font-weight: 600; font-size: 15.5px; }
+  .stxt span { display: block; color: var(--haze); font-size: 13px; margin-top: 1px; }
+  .sval { color: var(--haze); font-size: 14px; text-align: right; }
+  .chev { color: var(--haze); opacity: .6; font-size: 20px; }
+  .avatar { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font: 400 17px var(--display);
+    color: var(--porch-hi); background: #182038; box-shadow: 0 0 0 1.5px rgba(217,183,126,.55); }
+  .pill { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; }
+  .pill.home { color: #0f2a1e; background: var(--sage); }
+  .pill.away { color: var(--haze); background: rgba(255,255,255,.07); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: 1px; }
+  .dot.ok { background: var(--sage); box-shadow: 0 0 10px var(--sage); } .dot.bad { background: var(--flare); } .dot.off { background: var(--haze); }
+  .signout { display: block; width: 100%; margin-top: 28px; padding: 16px; border-radius: 18px; font-weight: 700; color: #ffb3ab;
+    background: rgba(255,107,94,.08); border: 1px solid rgba(255,107,94,.28); }
+  .fine { text-align: center; color: var(--haze); font-size: 12.5px; margin-top: 18px; line-height: 1.6; }
+  /* walk test */
+  .walk { position: fixed; inset: 0; z-index: 30; display: none; place-items: center; background: rgba(6,9,18,.8); backdrop-filter: blur(8px); padding: 20px; }
+  .walk.open { display: grid; }
+  .walk .sheet { width: min(94vw, 420px); max-height: 86vh; overflow-y: auto; }
+  .walk .prog { height: 6px; border-radius: 99px; background: var(--edge); margin: 14px 0 6px; overflow: hidden; }
+  .walk .prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--porch), var(--porch-hi)); transition: width .4s; }
+  .wrow { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-top: 1px solid var(--hair); }
+  .wrow .ck { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--edge); color: transparent; font-weight: 800; }
+  .wrow.passed .ck { background: linear-gradient(180deg, var(--porch-hi), var(--porch)); border-color: transparent; color: #1d160a; }
+  .wrow .nm { flex: 1; } .wrow small { color: var(--haze); }
+  .wrow.passed small { color: var(--porch-hi); }
+
   /* ---------------- night schedule ---------------- */
   .sched { border-radius: 22px; background: var(--glass); border: 1px solid var(--hair); box-shadow: var(--lift); padding: 4px 16px; }
   .sched .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--hair); }
@@ -345,7 +408,9 @@
   <section id="app" class="hidden">
     <div class="top">
       <div class="hello" id="who"></div>
-      <button class="ghost" id="logoutBtn">Sign out</button>
+      <button class="gear" id="openSettings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
     </div>
 
     <section class="fire" id="fireBox" role="alert">
@@ -546,6 +611,80 @@
   </div>
 </dialog>
 
+<!-- ======================= SETTINGS ======================= -->
+<aside class="settings" id="settings" aria-label="Settings" aria-hidden="true">
+  <div class="inner">
+    <div class="set-head"><h1>Settings</h1><button class="done" id="closeSettings">Done</button></div>
+
+    <div class="profile">
+      <div class="mono" id="mono">D</div>
+      <h2 id="pName">Name</h2>
+      <span class="role" id="pRole">Administrator</span>
+    </div>
+
+    <section class="set-group admin-only">
+      <h3>User management <small>Admin</small></h3>
+      <div class="card" id="people"></div>
+      <div class="card" style="margin-top:10px">
+        <button class="srow" id="manageUsers"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.3-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.7 2.5 3 5.2"/></svg></span><span class="stxt"><b>Manage users</b><span>Add family, choose who is an admin, remove access</span></span><span class="chev">›</span></button>
+        <button class="srow" id="manageCodes"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7.5" cy="15.5" r="4"/><path d="m10.5 12.5 9-9M16 6l3 3M14 8l2 2"/></svg></span><span class="stxt"><b>Alarm and door codes</b><span>Change codes on the panel and the Kwikset lock</span></span><span class="chev">›</span></button>
+      </div>
+    </section>
+
+    <section class="set-group">
+      <h3>Alerts</h3>
+      <div class="card">
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></span><span class="stxt"><b>Sound</b><span>Chimes, warnings and the alarm tone</span></span><button class="switch" data-pref="sound" role="switch"></button></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M3 9v6M21 9v6"/></svg></span><span class="stxt"><b>Vibration</b><span>Buzz when a door opens (Android)</span></span><button class="switch" data-pref="vibrate" role="switch"></button></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span class="stxt"><b>Talking briefing</b><span>Read the briefing aloud when the app opens</span></span><button class="switch" data-pref="autoSpeak" role="switch"></button></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span><span class="stxt"><b>Door chime when alarm is off</b><span>A soft ding-dong for every door</span></span><button class="switch" data-pref="chimeOff" role="switch"></button></div>
+      </div>
+    </section>
+
+    <section class="set-group">
+      <h3>Security</h3>
+      <div class="card">
+        <button class="srow" id="goNight"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span><span class="stxt"><b>Night schedule</b><span id="nightSummary">Arm the alarm automatically</span></span><span class="chev">›</span></button>
+        <button class="srow" id="startWalk"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 13l2 2 4-4"/></svg></span><span class="stxt"><b>System test</b><span>Walk through the house and check every sensor</span></span><span class="chev">›</span></button>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/></svg></span><span class="stxt"><b>Emergency service</b><span>Noonlight sends police, fire or medical</span></span><span class="sval" id="nlStatus"></span></div>
+      </div>
+    </section>
+
+    <section class="set-group">
+      <h3>Sensors</h3>
+      <div class="card" id="sensorCard"></div>
+    </section>
+
+    <section class="set-group">
+      <h3>Connections</h3>
+      <div class="card" id="connCard"></div>
+    </section>
+
+    <section class="set-group">
+      <h3>About</h3>
+      <div class="card">
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg></span><span class="stxt"><b>Home Security</b><span>Version 1.0</span></span></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7 15h10" stroke-linecap="round"/></svg></span><span class="stxt"><b>Alarm panel</b><span>Qolsys IQ Panel 2, software 2.8.1</span></span></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="stxt"><b>Front door lock</b><span>Kwikset Home Connect, Z-Wave Plus</span></span></div>
+      </div>
+    </section>
+
+    <button class="signout" id="logoutBtn">Sign out</button>
+    <p class="fine">Panel reboot, power down and Wi-Fi settings stay on the panel itself, so nobody can switch off your alarm from a phone.</p>
+  </div>
+</aside>
+
+<div class="walk" id="walk" role="dialog" aria-label="System test">
+  <div class="sheet">
+    <h2>System test</h2>
+    <p class="note" style="text-align:center;margin-top:8px">Open each door and window, wave at the motion detector, and clap near the glass break sensors. Each one ticks off when it reports in.</p>
+    <div class="prog"><i id="walkBar"></i></div>
+    <p class="note" id="walkCount" style="margin:0 0 6px"></p>
+    <div id="walkList"></div>
+    <button class="cancel" id="walkDone">Finish test</button>
+  </div>
+</div>
+
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
@@ -650,13 +789,18 @@ ents["binary_sensor.smoke_detector"]={state:"off",attributes:{device_class:"smok
 ents["binary_sensor.co_detector"]={state:"off",attributes:{device_class:"carbon_monoxide"}};
 window.__simulateLeak=()=>{ setS("binary_sensor.garage_closet_flood","on"); later(8000,()=>setS("binary_sensor.garage_closet_flood","off")); };
 window.__simulateFire=()=>{ setS("binary_sensor.smoke_detector","on"); };
+ents["person.guest"]={entity_id:"person.guest",state:"home",attributes:{friendly_name:"Guest",user_id:"u1"}};
+ents["person.alex"]={entity_id:"person.alex",state:"not_home",attributes:{friendly_name:"Alex Morgan",user_id:"u2"}};
+ents["person.sam"]={entity_id:"person.sam",state:"home",attributes:{friendly_name:"Sam Morgan"}};
+ents["switch.noonlight_alarm"]={state:"off",attributes:{}};
+window.__openDoor=(id)=>{ setS(id,"on"); later(1500,()=>setS(id,"off")); };
 let listener=null, timers=[];
 const push=()=>{ents={...ents}; listener&&listener(ents)};
 const setS=(id,state)=>{ents[id]={...ents[id],state,last_changed:new Date().toISOString()};push()};
 const later=(ms,f)=>timers.push(setTimeout(f,ms));
 async function getAuth(){return {}}
 async function createConnection(){return {addEventListener(){}}}
-async function getUser(){return {name:"Guest"}}
+async function getUser(){return {name:"Guest",is_admin:true}}
 function subscribeEntities(c,cb){listener=cb;cb(ents)}
 const AL="alarm_control_panel.home_security";
 async function callService(conn,domain,service,data={},target={},returnResponse){
@@ -695,7 +839,7 @@ window.__simulateBreakIn=()=>{
 
 const $ = (id) => document.getElementById(id);
 const TOKEN_KEY = "hs_tokens";
-let conn = null, entities = {}, userName = "", alarmPromptShown = false;
+let conn = null, entities = {}, userName = "", userIsAdmin = false, alarmPromptShown = false;
 
 const store = {
   load() { try { return JSON.parse(localStorage.getItem(TOKEN_KEY)) || undefined; } catch { return undefined; } },
@@ -717,7 +861,8 @@ async function connect(interactive) {
     const auth = await getAuth({ hassUrl, loadTokens: store.load, saveTokens: store.save });
     if (isCallback) history.replaceState(null, "", location.pathname);
     conn = await createConnection({ auth });
-    userName = (await getUser(conn)).name;
+    const me = await getUser(conn);
+    userName = me.name; userIsAdmin = !!(me.is_admin || me.is_owner);
     $("who").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
     $("login").classList.add("hidden");
     $("app").classList.remove("hidden");
@@ -825,6 +970,8 @@ function render() {
 
   // Night schedule
   renderNight();
+  if ($("settings").classList.contains("open")) renderSettings();
+  renderWalk();
 
   // Climate
   if (CONFIG.thermostat) renderClimate();
@@ -870,8 +1017,9 @@ function tone(freq, start, len, vol = 0.25, type = "sine") {
   g.gain.exponentialRampToValueAtTime(0.0001, t + len);
   o.connect(g).connect(audio.destination); o.start(t); o.stop(t + len + 0.05);
 }
+function buzz(pattern) { if (prefs.get("vibrate", true)) { try { navigator.vibrate?.(pattern); } catch {} } }
 function playSound(kind) {
-  if (!audio) return;
+  if (!audio || !prefs.get("sound", true)) return;
   try {
     if (kind === "chime") { tone(880, 0, 0.6); tone(660, 0.28, 0.9); }                  // ding-dong
     else if (kind === "warning") { for (let i = 0; i < 4; i++) { tone(988, i * 0.45, 0.3, 0.35, "square"); } }
@@ -881,20 +1029,20 @@ function playSound(kind) {
 let leakWasOn = false;
 function watchLeak() {
   const on = CONFIG.leaks.some((d) => entities[d.id]?.state === "on");
-  if (on && !leakWasOn) { playSound("warning"); try { navigator.vibrate?.([400, 150, 400, 150, 400]); } catch {} }
+  if (on && !leakWasOn) { playSound("warning"); buzz([400, 150, 400, 150, 400]); }
   leakWasOn = on;
 }
 let fireWasOn = false;
 function watchFire() {
   const on = CONFIG.smoke.some((d) => entities[d.id]?.state === "on");
-  if (on && !fireWasOn) { playSound("alarm"); try { navigator.vibrate?.([900, 200, 900, 200, 900, 200, 900]); } catch {} }
+  if (on && !fireWasOn) { playSound("alarm"); buzz([900, 200, 900, 200, 900, 200, 900]); }
   fireWasOn = on;
 }
 let lastAlarmState = null;
 function watchAlarm() {
   const st = entities[CONFIG.alarm]?.state;
   if (lastAlarmState && st !== lastAlarmState && st === "triggered") {
-    playSound("alarm"); try { navigator.vibrate?.([900, 200, 900, 200, 900, 200, 900]); } catch {}
+    playSound("alarm"); buzz([900, 200, 900, 200, 900, 200, 900]);
   }
   lastAlarmState = st;
 }
@@ -908,8 +1056,7 @@ function watchDoors(first) {
     const open = e.state === "on" || e.state === "open" || e.state === "opening";
     if (!first && !motion && open && lastSeen[s.id] === false) {
       const armed = (entities[CONFIG.alarm]?.state || "").startsWith("armed") || ["pending", "triggered"].includes(entities[CONFIG.alarm]?.state);
-      try { navigator.vibrate?.(armed ? [500, 150, 500, 150, 900] : [250, 120, 250]); } catch {}
-      playSound(armed ? "warning" : "chime");
+      if (armed || prefs.get("chimeOff", true)) { buzz(armed ? [500, 150, 500, 150, 900] : [250, 120, 250]); playSound(armed ? "warning" : "chime"); }
       toast(s.kind === "glass" ? `${s.label}: glass breaking` : `${s.label} opened`);
     }
     lastSeen[s.id] = open;
@@ -1295,6 +1442,86 @@ $("autoSpeak").onclick = () => {
 setInterval(() => conn && !document.hidden && buildBriefing(false), 10 * 60e3);
 document.addEventListener("visibilitychange", () => { if (!document.hidden && conn) buildBriefing(true); });
 
+/* ---------------- settings ---------------- */
+const initials = (n) => (n || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+function openSettings() { renderSettings(); $("settings").classList.add("open"); $("settings").setAttribute("aria-hidden", "false"); $("settings").scrollTop = 0; }
+function closeSettings() { $("settings").classList.remove("open"); $("settings").setAttribute("aria-hidden", "true"); }
+$("openSettings").onclick = openSettings;
+$("closeSettings").onclick = closeSettings;
+function renderSettings() {
+  $("mono").textContent = initials(userName);
+  $("pName").textContent = userName || "You";
+  $("pRole").textContent = userIsAdmin ? "Administrator" : "Member";
+  $("pRole").classList.toggle("member", !userIsAdmin);
+  document.querySelectorAll(".admin-only").forEach((el) => el.style.display = userIsAdmin ? "" : "none");
+
+  // Household from Home Assistant "person" entities, with home/away
+  const people = Object.values(entities).filter((e) => e.entity_id?.startsWith("person."));
+  $("people").innerHTML = people.length ? people.map((p) => {
+    const nm = p.attributes.friendly_name || p.entity_id.slice(7), home = p.state === "home";
+    return `<div class="srow"><span class="avatar">${escapeHtml(initials(nm))}</span><span class="stxt"><b>${escapeHtml(nm)}</b><span>${p.attributes.user_id ? "Can sign in" : "No app access"}</span></span><span class="pill ${home ? "home" : "away"}">${home ? "Home" : "Away"}</span></div>`;
+  }).join("") : `<div class="srow"><span class="stxt"><b>No household members yet</b><span>Add people in Home Assistant to see who is home.</span></span></div>`;
+
+  // Alert switches
+  const defaults = { sound: true, vibrate: true, autoSpeak: true, chimeOff: true };
+  document.querySelectorAll("[data-pref]").forEach((b) => b.setAttribute("aria-checked", prefs.get(b.dataset.pref, defaults[b.dataset.pref])));
+
+  // Night schedule summary
+  const n = CONFIG.night;
+  $("nightSummary").textContent = entities[n.enabled]?.state === "on" ? `Arms every night at ${niceTime(entities[n.armAt]?.state)}` : "Off";
+
+  // Noonlight
+  const nl = entities["switch.noonlight_alarm"];
+  $("nlStatus").innerHTML = nl && nl.state !== "unavailable" ? '<span class="dot ok"></span>Ready' : '<span class="dot off"></span>Not connected';
+
+  // Sensors (with battery if the panel reports it)
+  $("sensorCard").innerHTML = CONFIG.sensors.concat(CONFIG.smoke.map((d) => ({ ...d, kind: "smoke" })), CONFIG.leaks.map((d) => ({ ...d, kind: "leak" }))).map((sn) => {
+    const e = entities[sn.id];
+    const bat = entities[sn.id.replace(/^binary_sensor\./, "sensor.") + "_battery"]?.state;
+    const on = e && (e.state === "on" || e.state === "open");
+    const st = !e || e.state === "unavailable" ? '<span class="dot off"></span>Offline' : on ? '<span class="dot bad"></span>Active' : '<span class="dot ok"></span>Ready';
+    return `<div class="srow"><span class="stxt"><b>${escapeHtml(sn.label)}</b><span>${bat ? "Battery " + bat + "%" : sn.kind === "smoke" ? "Fire" : sn.kind === "leak" ? "Water" : sn.kind === "glass" ? "Glass break" : sn.id.startsWith("cover.") ? "Garage opener" : "Door, window or motion"}</span></span><span class="sval">${st}</span></div>`;
+  }).join("");
+
+  // Connections
+  const ok = (v) => v ? '<span class="dot ok"></span>Connected' : '<span class="dot bad"></span>Not connected';
+  const alarm = entities[CONFIG.alarm];
+  $("connCard").innerHTML = [
+    ["Alarm panel", "Qolsys IQ Panel 2", ok(alarm && alarm.state !== "unavailable")],
+    ["Home Assistant", "Your home hub", ok(!!conn)],
+    ["Weather", "Daily forecast", ok(!!entities[CONFIG.weather])],
+    ["Front door lock", "Kwikset", ok(entities[CONFIG.responderLock] && entities[CONFIG.responderLock].state !== "unavailable")],
+  ].map(([a, b, c]) => `<div class="srow"><span class="stxt"><b>${a}</b><span>${b}</span></span><span class="sval">${c}</span></div>`).join("");
+}
+document.querySelectorAll("[data-pref]").forEach((b) => b.onclick = () => {
+  const k = b.dataset.pref, v = b.getAttribute("aria-checked") !== "true";
+  prefs.set(k, v); b.setAttribute("aria-checked", v);
+  if (k === "autoSpeak") $("autoSpeak").setAttribute("aria-checked", v);
+  toast({ sound: "Sound", vibrate: "Vibration", autoSpeak: "Talking briefing", chimeOff: "Door chime" }[k] + (v ? " on" : " off"));
+});
+$("manageUsers").onclick = () => { location.href = (CONFIG.hassUrl || location.origin).replace(/\/$/, "") + "/config/person"; };
+$("manageCodes").onclick = () => toast("Change the alarm code on the panel (Settings > User Management) and the door code on the Kwikset keypad.");
+$("goNight").onclick = () => { closeSettings(); setTimeout(() => $("nightBlock").scrollIntoView({ behavior: "smooth" }), 350); };
+
+// System test (walk test)
+let walk = null;
+$("startWalk").onclick = () => {
+  if ((entities[CONFIG.alarm]?.state || "").startsWith("armed")) return toast("Turn the alarm off before testing.");
+  walk = new Set(); renderWalk(); $("walk").classList.add("open");
+};
+$("walkDone").onclick = () => {
+  const total = CONFIG.sensors.filter((x) => !x.id.startsWith("cover.")).length;
+  $("walk").classList.remove("open"); toast(walk.size === total ? "Every sensor passed" : `${walk.size} of ${total} sensors tested`); walk = null;
+};
+function renderWalk() {
+  if (!walk) return;
+  const list = CONFIG.sensors.filter((x) => !x.id.startsWith("cover."));
+  list.forEach((x) => { const st = entities[x.id]?.state; if (st === "on" || st === "open") { if (!walk.has(x.id)) { walk.add(x.id); playSound("chime"); buzz(80); } } });
+  $("walkList").innerHTML = list.map((x) => `<div class="wrow ${walk.has(x.id) ? "passed" : ""}" data-id="${x.id}"><span class="ck">✓</span><span class="nm">${escapeHtml(x.label)}</span><small>${walk.has(x.id) ? "Passed" : "Waiting"}</small></div>`).join("");
+  $("walkBar").style.width = (walk.size / list.length * 100) + "%";
+  $("walkCount").textContent = `${walk.size} of ${list.length} sensors tested`;
+}
+
 /* ---------------- night schedule ---------------- */
 const hm = (v) => (v || "").slice(0, 5);
 function niceTime(v) {
@@ -1490,6 +1717,7 @@ setInterval(() => conn && render(), 30000);
 connect(false);
 $("simBtn").onclick = () => { window.__simulateBreakIn(); toast("Garage door to the hallway opened. Disarm with 1234, or wait."); window.scrollTo({ top: 0, behavior: "smooth" }); };
 $("leakBtn").onclick = () => { window.__simulateLeak(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+$("walkList").addEventListener("click", (e) => { const r = e.target.closest("[data-id]"); if (r) window.__openDoor(r.dataset.id); });
 $("fireBtn").onclick = () => { window.__simulateFire(); window.scrollTo({ top: 0, behavior: "smooth" }); };
 document.querySelectorAll("[data-wx]").forEach((b) => b.onclick = () => window.__setWeather(b.dataset.wx));
 </script>
