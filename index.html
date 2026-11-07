@@ -384,6 +384,23 @@
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
 </style>
+<script>
+  // Inside the Android app: use the phone's own voice and vibration.
+  if (window.AndroidBridge) {
+    try { Object.defineProperty(navigator, "vibrate", { value: (p) => { AndroidBridge.vibrate(JSON.stringify([].concat(p))); return true; }, configurable: true }); } catch (e) {}
+    window.SpeechSynthesisUtterance = function (t) { this.text = t; };
+    const synth = {
+      get speaking() { return AndroidBridge.isSpeaking(); },
+      cancel() { AndroidBridge.stop(); },
+      getVoices() { return []; },
+      speak(u) {
+        AndroidBridge.speak(u.text); if (u.onstart) u.onstart();
+        setTimeout(() => { const iv = setInterval(() => { if (!AndroidBridge.isSpeaking()) { clearInterval(iv); if (u.onend) u.onend(); } }, 400); }, 1500);
+      },
+    };
+    try { Object.defineProperty(window, "speechSynthesis", { value: synth, configurable: true }); } catch (e) { window.speechSynthesis = synth; }
+  }
+</script>
 </head>
 <body data-state="disarmed">
 <canvas id="sky" aria-hidden="true"></canvas>
