@@ -1,7 +1,7 @@
 {
-  "name": "Home Security",
-  "short_name": "Security",
-  "description": "Demo of the Home Security app with sample data.",
+  "name": "Gordon Home Security",
+  "short_name": "Gordon Security",
+  "description": "Gordon Home Security (demo with sample data).",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -9,8 +9,23 @@
   "background_color": "#0d1322",
   "theme_color": "#0d1322",
   "icons": [
-    { "src": "security-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "security-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "security-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "security-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "security-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "security-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

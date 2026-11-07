@@ -6,12 +6,12 @@
 <meta name="theme-color" content="#0d1322">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Home Security demo</title>
+<title>Gordon Home Security</title>
 <link rel="manifest" href="security.webmanifest">
 <link rel="apple-touch-icon" href="security-icon-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="security-icon-192.png">
-<meta name="application-name" content="Security">
-<meta name="apple-mobile-web-app-title" content="Security">
+<meta name="application-name" content="Gordon Home Security">
+<meta name="apple-mobile-web-app-title" content="Gordon Security">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -358,6 +358,8 @@
   #login { min-height: 88vh; display: flex; flex-direction: column; justify-content: center; text-align: center; }
   #login svg { width: 190px; margin: 0 auto 26px; overflow: visible; }
   #login h1 { font-size: 58px; line-height: .95; }
+  #login .brand-top { display: block; font: 600 14px var(--ui); letter-spacing: .32em; text-transform: uppercase; color: var(--porch);
+    margin-bottom: 10px; }
   #login p { color: var(--haze); margin: 12px auto 30px; max-width: 30ch; }
   .cta { display: block; width: 100%; padding: 18px; border-radius: 18px; color: #1d160a; font-weight: 700; font-size: 17px;
     background: linear-gradient(180deg, var(--porch-hi), var(--porch)); letter-spacing: .01em;
@@ -436,7 +438,7 @@
       <rect x="38" y="84" width="26" height="22" rx="2" fill="#0d1322" stroke="#98a1ba" stroke-width="2"/>
       <rect x="126" y="84" width="26" height="22" rx="2" fill="#0d1322" stroke="#98a1ba" stroke-width="2"/>
     </svg>
-    <h1>Home Security</h1>
+    <h1><span class="brand-top">Gordon</span>Home Security</h1>
     <p>Sign in with your Home Assistant account to watch and control your home. In this demo, just tap Sign in.</p>
     <button class="cta" id="loginBtn">Sign in</button>
     <div id="loginMsg" role="status"></div>
@@ -701,7 +703,7 @@
     <section class="set-group">
       <h3>About</h3>
       <div class="card">
-        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg></span><span class="stxt"><b>Home Security</b><span>Version 1.2</span></span></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg></span><span class="stxt"><b>Gordon Home Security</b><span>Version 1.3</span></span></div>
         <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7 15h10" stroke-linecap="round"/></svg></span><span class="stxt"><b>Alarm panel</b><span>Qolsys IQ Panel 2, software 2.8.1</span></span></div>
         <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="stxt"><b>Front door lock</b><span>Schlage smart lock</span></span></div>
         <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="stxt"><b>Back door lock</b><span>Kwikset Home Connect, Z-Wave Plus</span></span></div>

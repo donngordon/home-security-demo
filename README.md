@@ -1,4 +1,4 @@
-# Home Security demo
+# Gordon Home Security (demo)
 
 A demo of the Home Security app with **sample data only**. It doesn't connect to any real home, lock, camera or alarm.
 

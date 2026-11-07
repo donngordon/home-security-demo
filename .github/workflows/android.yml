@@ -32,15 +32,19 @@ jobs:
         run: gradle -p android assembleDebug --no-daemon
 
       - name: Name the file
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk HomeSecurity.apk
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk HomeSecurity.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk GordonHomeSecurity.apk
 
       - name: Publish as a download
         uses: softprops/action-gh-release@v2
         with:
           tag_name: app-v1.0.${{ github.run_number }}
-          name: Home Security app (demo) ${{ github.run_number }}
+          name: Gordon Home Security ${{ github.run_number }}
           body: |
-            Download **HomeSecurity.apk** on your Android phone, open it, and allow installing from this source when asked.
+            Download **GordonHomeSecurity.apk** on your Android phone, open it, and allow installing from this source when asked.
             This is the demo with sample data. It does not control a real home.
-          files: HomeSecurity.apk
+          files: |
+            HomeSecurity.apk
+            GordonHomeSecurity.apk
           make_latest: true
