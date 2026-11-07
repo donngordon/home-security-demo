@@ -40,6 +40,10 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient());
         web.setWebChromeClient(new WebChromeClient());
         web.setBackgroundColor(0xFF0D1322);
+        // Don't let Android's long-press (text selection, menus) interrupt "hold to unlock".
+        web.setLongClickable(false);
+        web.setOnLongClickListener(v -> true);
+        web.setHapticFeedbackEnabled(false);
         web.addJavascriptInterface(new Bridge(), "AndroidBridge");
         setContentView(web);
 

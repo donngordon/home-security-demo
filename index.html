@@ -34,6 +34,7 @@
     --ui: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  button, .dial, .hold, .light, .srow, .wrow { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   html { background: var(--night); }
   body {
     margin: 0; color: var(--paper); font: 16px/1.5 var(--ui);
@@ -1675,27 +1676,45 @@ document.querySelectorAll("[data-dispatch]").forEach((btn) => {
 
 /* ---------------- hold-to-confirm ---------------- */
 function holdable(el, action, enabled = () => true) {
-  let start = 0, raf = 0;
+  // Works with fingers (touch), mouse and keyboard. Touch is handled directly so
+  // Android's own long-press (text selection, context menu) can't cancel the hold.
+  let start = 0, raf = 0, x0 = 0, y0 = 0, viaTouch = false;
   const set = (p) => el.style.setProperty("--p", p);
   const reset = () => { cancelAnimationFrame(raf); start = 0; set(0); delete el.dataset.holding; };
   const tick = (t) => {
+    if (!start) return;
     const p = Math.min(1, (t - start) / CONFIG.holdMs);
     set(p);
-    if (p >= 1) { reset(); navigator.vibrate?.(60); action(); } else raf = requestAnimationFrame(tick);
+    if (p >= 1) { reset(); buzz(60); action(); } else raf = requestAnimationFrame(tick);
   };
+  const begin = (x, y) => { x0 = x; y0 = y; el.dataset.holding = ""; start = performance.now(); raf = requestAnimationFrame(tick); };
+  const end = () => { const short = start && performance.now() - start < 400; reset(); if (short) toast("Keep holding for 2 seconds"); };
+
+  // Touch (phones, Android app)
+  el.addEventListener("touchstart", (e) => {
+    if (el.disabled || !enabled()) return;           // let normal taps through (e.g. tap to lock)
+    e.preventDefault();                              // stops Android long-press from taking over
+    viaTouch = true; const t = e.touches[0]; begin(t.clientX, t.clientY);
+  }, { passive: false });
+  el.addEventListener("touchmove", (e) => {
+    if (!start) return; e.preventDefault();
+    const t = e.touches[0];
+    if (Math.hypot(t.clientX - x0, t.clientY - y0) > 60) reset();   // finger slid far away: cancel
+  }, { passive: false });
+  el.addEventListener("touchend", (e) => { if (start) { e.preventDefault(); end(); } setTimeout(() => (viaTouch = false), 600); }, { passive: false });
+  el.addEventListener("touchcancel", () => { /* Android may send this on long-press; keep holding */ });
+
+  // Mouse / pen (computers)
   el.addEventListener("pointerdown", (e) => {
-    if (el.disabled || !enabled()) return;
-    e.preventDefault(); el.setPointerCapture?.(e.pointerId);
-    el.dataset.holding = ""; start = performance.now(); raf = requestAnimationFrame(tick);
+    if (viaTouch || e.pointerType === "touch" || el.disabled || !enabled()) return;
+    e.preventDefault(); el.setPointerCapture?.(e.pointerId); begin(e.clientX, e.clientY);
   });
-  ["pointerup", "pointercancel", "pointerleave"].forEach((ev) => el.addEventListener(ev, () => {
-    const short = start && performance.now() - start < 400;
-    reset(); if (short) toast("Keep holding for 2 seconds");
-  }));
-  el.addEventListener("keydown", (e) => {          // keyboard: hold Space or Enter
-    if ((e.key === " " || e.key === "Enter") && !e.repeat && enabled() && !el.disabled) {
-      e.preventDefault(); el.dataset.holding = ""; start = performance.now(); raf = requestAnimationFrame(tick);
-    }
+  ["pointerup", "pointercancel"].forEach((ev) => el.addEventListener(ev, (e) => { if (e.pointerType !== "touch" && start && !viaTouch) end(); }));
+  document.addEventListener("touchend", () => { if (start && viaTouch) end(); }, { passive: true });   // finger lifted elsewhere
+
+  // Keyboard: hold Space or Enter
+  el.addEventListener("keydown", (e) => {
+    if ((e.key === " " || e.key === "Enter") && !e.repeat && enabled() && !el.disabled) { e.preventDefault(); begin(0, 0); }
   });
   el.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") reset(); });
   el.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -1735,6 +1754,7 @@ setInterval(() => conn && render(), 30000);
 connect(false);
 $("simBtn").onclick = () => { window.__simulateBreakIn(); toast("Back door to the garage opened. Disarm with 1234, or wait."); window.scrollTo({ top: 0, behavior: "smooth" }); };
 $("leakBtn").onclick = () => { window.__simulateLeak(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+$("walk").querySelector(".note").textContent = "Demo: your real doors aren't connected yet. Tap each sensor below to pretend it was opened. In the real app, this ticks off on its own as you walk around.";
 $("walkList").addEventListener("click", (e) => { const r = e.target.closest("[data-id]"); if (r) window.__openDoor(r.dataset.id); });
 $("fireBtn").onclick = () => { window.__simulateFire(); window.scrollTo({ top: 0, behavior: "smooth" }); };
 document.querySelectorAll("[data-wx]").forEach((b) => b.onclick = () => window.__setWeather(b.dataset.wx));
