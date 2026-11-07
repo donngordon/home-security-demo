@@ -139,6 +139,12 @@
   .fire .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
   .fire .row2 button { padding: 13px; border-radius: 14px; font-weight: 700; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); }
 
+  .leak { display: none; margin: 12px 0; padding: 18px; border-radius: 22px; text-align: center;
+    background: linear-gradient(180deg, #123552, #0c2238); border: 1px solid rgba(140,200,255,.4); box-shadow: 0 0 36px -8px rgba(110,180,255,.55); }
+  body[data-leak] .leak { display: block; }
+  .leak h2 { font-size: 32px; }
+  .leak p { color: #cfe4f6; margin-top: 6px; }
+
   /* ---------------- daily briefing ---------------- */
   .brief { margin: 10px 0 4px; padding: 20px 18px 8px; border-radius: 24px; background: var(--glass);
     border: 1px solid var(--hair); box-shadow: var(--lift); }
@@ -352,6 +358,11 @@
       <p id="fireNote" style="font-size:13px;margin-top:10px"></p>
     </section>
 
+    <section class="leak" id="leakBox" role="alert">
+      <h2>Water leak</h2>
+      <p id="leakText"></p>
+    </section>
+
     <section class="brief" id="brief" aria-live="polite">
       <div class="brief-top">
         <div>
@@ -369,7 +380,7 @@
 
     <div class="demo">
       <p><b>Demo with sample data.</b> Nothing here controls a real home. Disarm code: 1234.</p>
-      <span style="display:grid;gap:6px"><button id="simBtn">Try a break-in</button><button id="fireBtn">Try a kitchen fire</button></span>
+      <span style="display:grid;gap:6px"><button id="simBtn">Try a break-in</button><button id="fireBtn">Try a kitchen fire</button><button id="leakBtn">Try a water leak</button></span>
     </div>
     <div class="wxdemo" role="group" aria-label="Preview the weather background">
       <span>Preview weather:</span>
@@ -392,11 +403,11 @@
         <line class="wall" x1="252" y1="92" x2="252" y2="214"/>
         <line class="wall" x1="90" y1="92" x2="330" y2="92"/>
         <text class="room" x="50" y="140" text-anchor="middle">Garage</text>
-        <text class="room" x="120" y="110" text-anchor="middle">Shoe hall</text>
+        <text class="room" x="120" y="110" text-anchor="middle">Hall</text>
         <text class="room" x="201" y="110" text-anchor="middle">Living room</text>
-        <text class="room" x="291" y="110" text-anchor="middle">Kitchen</text>
+        <text class="room" x="291" y="110" text-anchor="middle">Bedroom</text>
         <rect x="108" y="182" width="22" height="32" rx="2" fill="none" stroke="var(--state)" stroke-width="1.6" opacity=".7"/>
-        <rect x="180" y="140" width="42" height="28" rx="2" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="1.2"/>
+        <rect x="196" y="176" width="48" height="38" rx="2" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1.2"/><line x1="220" y1="176" x2="220" y2="214" stroke="rgba(255,255,255,.12)" stroke-width="1.2"/>
         <rect x="270" y="140" width="40" height="28" rx="2" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="1.2"/>
         <g id="markers"></g>
       </svg>
@@ -548,9 +559,8 @@ const CONFIG = {
   alarm: "alarm_control_panel.home_security",
   // Every door with a smart lock. Hold a lock 2 seconds to unlock it, tap to lock it.
   locks: [
-    { id: "lock.front_door",        label: "Front door",             sensor: "binary_sensor.front_door" },
-    { id: "lock.garage_entry_door", label: "Garage door to hallway", sensor: "binary_sensor.garage_entry_door" },
-    { id: "lock.back_door",         label: "Back door",              sensor: "binary_sensor.back_door" },
+    { id: "lock.front_door",        label: "Front door",             sensor: "binary_sensor.front_door" },  // Kwikset Home Connect
+    { id: "lock.garage_entry_door", label: "Garage door to hallway", sensor: "binary_sensor.garage_door" },  // remove if no smart lock
   ],
   responderLock: "lock.front_door",  // the door the alarm screen offers to unlock for responders
   garage: "cover.garage_door",       // set to null if you have no garage opener
@@ -579,20 +589,29 @@ const CONFIG = {
   },
   // Smoke and carbon monoxide detectors: always watched, even when the alarm is off.
   smoke: [
-    { id: "binary_sensor.smoke_detector", label: "Kitchen smoke detector", kind: "smoke" },
-    { id: "binary_sensor.co_detector",    label: "Carbon monoxide detector", kind: "co" },
+    { id: "binary_sensor.smoke_detector", label: "Smoke detector", kind: "smoke" },
+    // Add a carbon monoxide detector here when you install one: kind: "co"
+  ],
+  // Water leak sensors from the panel
+  leaks: [
+    { id: "binary_sensor.garage_closet_flood",   label: "Garage closet flood sensor" },
+    { id: "binary_sensor.garage_closet_f_flood", label: "Garage closet flood sensor 2" },
   ],
   thermostat: "climate.thermostat",  // set to null if you don't want it
   weather: "weather.forecast_home",  // Home Assistant's built-in weather (Settings > Devices > Met.no)
   comfort: { heat: 68, cool: 78 },   // balanced temperatures for winter and summer
   tempUnit: "°",             // how often the small pictures update
   sensors: [
+    // Names come from your Qolsys panel (Settings > Advanced > Edit Sensor).
+    // Confirm the exact entity IDs once the panel is connected to Home Assistant.
     { id: "binary_sensor.front_door",          label: "Front door",             x: 119, y: 214 },
-    { id: "binary_sensor.garage_entry_door",   label: "Garage door to hallway", x: 90,  y: 190 },
-    { id: "cover.garage_door",                 label: "Garage door",            x: 50,  y: 214 },
-    { id: "binary_sensor.back_door",           label: "Back door",              x: 330, y: 175 },
-    { id: "binary_sensor.living_room_window",  label: "Living room window",     x: 201, y: 154 },
-    { id: "binary_sensor.hallway_motion",      label: "Shoe hall motion",       x: 120, y: 150 },
+    { id: "binary_sensor.garage_door",         label: "Garage door to hallway", x: 90,  y: 190 },
+    { id: "binary_sensor.patio_door",          label: "Patio door",             x: 220, y: 214 },
+    { id: "binary_sensor.left_bedroom_window", label: "Left bedroom window",    x: 290, y: 154 },
+    { id: "binary_sensor.motion_detector",     label: "Motion detector",        x: 135, y: 150 },
+    { id: "binary_sensor.bedroom_glassbreak",  label: "Bedroom glass break",    x: 312, y: 196, kind: "glass" },
+    { id: "binary_sensor.panel_glass_break",   label: "Panel glass break",      x: 175, y: 128, kind: "glass" },
+    { id: "cover.garage_door",                 label: "Garage overhead door",   x: 50,  y: 214 },
   ],
   holdMs: 2000,
 };
@@ -605,13 +624,16 @@ let ents={
  "alarm_control_panel.home_security":{state:"disarmed",attributes:{}},
  "lock.front_door":{state:"locked",last_changed:minsAgo(4),attributes:{}},
  "lock.garage_entry_door":{state:"locked",last_changed:minsAgo(95),attributes:{}},
- "lock.back_door":{state:"unlocked",last_changed:minsAgo(12),attributes:{}},
  "cover.garage_door":{state:"closed",last_changed:minsAgo(180),attributes:{}},
  "binary_sensor.front_door":{state:"off",attributes:{device_class:"door"}},
- "binary_sensor.back_door":{state:"off",attributes:{device_class:"door"}},
- "binary_sensor.garage_entry_door":{state:"off",attributes:{device_class:"door"}},
- "binary_sensor.living_room_window":{state:"off",attributes:{device_class:"window"}},
- "binary_sensor.hallway_motion":{state:"off",attributes:{device_class:"motion"}}};
+ "binary_sensor.patio_door":{state:"off",attributes:{device_class:"door"}},
+ "binary_sensor.garage_door":{state:"off",attributes:{device_class:"door"}},
+ "binary_sensor.left_bedroom_window":{state:"off",attributes:{device_class:"window"}},
+ "binary_sensor.bedroom_glassbreak":{state:"off",attributes:{device_class:"vibration"}},
+ "binary_sensor.panel_glass_break":{state:"off",attributes:{device_class:"vibration"}},
+ "binary_sensor.garage_closet_flood":{state:"off",attributes:{device_class:"moisture"}},
+ "binary_sensor.garage_closet_f_flood":{state:"off",attributes:{device_class:"moisture"}},
+ "binary_sensor.motion_detector":{state:"off",attributes:{device_class:"motion"}}};
 ["front_porch","driveway","garage","backyard"].forEach((n,i)=>ents["camera."+n]={state:"idle",attributes:{entity_picture:CAMS[i]}});
 ents["climate.thermostat"]={state:"heat",attributes:{current_temperature:69,temperature:72,hvac_action:"heating",hvac_modes:["heat","cool","heat_cool","off"]}};
 [["living_room",204],["kitchen",255],["shoe_hall",0],["porch",153],["garage",0],["bedroom",0],["front_yard_garden",178],["back_yard_garden",0]].forEach(([n,b])=>ents["light."+n]={state:b?"on":"off",attributes:b?{brightness:b}:{}});
@@ -626,6 +648,7 @@ window.__setWeather=(c)=>{const [t,h,l]=WX[c]; ents["weather.forecast_home"]={st
 ents["sun.sun"]={state:(new Date().getHours()>=7&&new Date().getHours()<17)?"above_horizon":"below_horizon",attributes:{}};
 ents["binary_sensor.smoke_detector"]={state:"off",attributes:{device_class:"smoke"}};
 ents["binary_sensor.co_detector"]={state:"off",attributes:{device_class:"carbon_monoxide"}};
+window.__simulateLeak=()=>{ setS("binary_sensor.garage_closet_flood","on"); later(8000,()=>setS("binary_sensor.garage_closet_flood","off")); };
 window.__simulateFire=()=>{ setS("binary_sensor.smoke_detector","on"); };
 let listener=null, timers=[];
 const push=()=>{ents={...ents}; listener&&listener(ents)};
@@ -642,7 +665,7 @@ async function callService(conn,domain,service,data={},target={},returnResponse)
   if(k==="weather.get_forecasts"){ const w=ents["weather.forecast_home"]; return {response:{"weather.forecast_home":{forecast:[{condition:w.state,temperature:w.attributes.high,templow:w.attributes.low}]}}}; }
   if(k==="alarm_control_panel.alarm_arm_home") setS(AL,"armed_home");
   else if(k==="alarm_control_panel.alarm_arm_away"){ setS(AL,"arming"); if(ents["cover.garage_door"].state==="open"){setS("cover.garage_door","closing");later(3000,()=>setS("cover.garage_door","closed"))} later(5000,()=>ents[AL].state==="arming"&&setS(AL,"armed_away")); }
-  else if(k==="alarm_control_panel.alarm_disarm"){ if(data.code!=="1234") throw {message:"Wrong code. In this demo the code is 1234."}; timers.forEach(clearTimeout); timers=[]; setS(AL,"disarmed"); ["binary_sensor.garage_entry_door","binary_sensor.hallway_motion"].forEach(i=>setS(i,"off")); }
+  else if(k==="alarm_control_panel.alarm_disarm"){ if(data.code!=="1234") throw {message:"Wrong code. In this demo the code is 1234."}; timers.forEach(clearTimeout); timers=[]; setS(AL,"disarmed"); ["binary_sensor.garage_door","binary_sensor.motion_detector"].forEach(i=>setS(i,"off")); }
   else if(k==="lock.lock"){ [].concat(target.entity_id).forEach(id=>{ if(ents[id].state!=="locked"){ setS(id,"locking"); later(1500,()=>setS(id,"locked")); } }); }
   else if(k==="lock.unlock"){ [].concat(target.entity_id).forEach(id=>{ setS(id,"unlocking"); later(1500,()=>setS(id,"unlocked")); }); }
   else if(k==="script.security_unlock_for_responders"){ setS("lock.front_door","unlocking"); later(1500,()=>setS("lock.front_door","unlocked")); }
@@ -663,8 +686,8 @@ async function callService(conn,domain,service,data={},target={},returnResponse)
 }
 window.__simulateBreakIn=()=>{
   if(ents[AL].state==="disarmed") setS(AL,"armed_away");
-  setS("binary_sensor.garage_entry_door","on"); setS(AL,"pending");
-  later(1200,()=>setS("binary_sensor.hallway_motion","on"));
+  setS("binary_sensor.garage_door","on"); setS(AL,"pending");
+  later(1200,()=>setS("binary_sensor.motion_detector","on"));
   later(7000,()=>{ if(ents[AL].state!=="pending") return; setS(AL,"triggered");
     if(ents["lock.front_door"].state==="locked") document.getElementById("alarmDlg").showModal(); });
 };
@@ -700,7 +723,7 @@ async function connect(interactive) {
     $("app").classList.remove("hidden");
     conn.addEventListener("disconnected", () => ($("conn").textContent = "Connection lost. Reconnecting…"));
     conn.addEventListener("ready", () => ($("conn").textContent = ""));
-    subscribeEntities(conn, (ents) => { const first = !Object.keys(entities).length; entities = ents; render(); if (first) { refreshCams(); buildBriefing(true); } else scheduleBriefing(); watchDoors(first); watchAlarm(); watchFire(); });
+    subscribeEntities(conn, (ents) => { const first = !Object.keys(entities).length; entities = ents; render(); if (first) { refreshCams(); buildBriefing(true); } else scheduleBriefing(); watchDoors(first); watchAlarm(); watchFire(); watchLeak(); });
   } catch (err) {
     store.save(null);
     $("loginMsg").textContent =
@@ -793,6 +816,13 @@ function render() {
     $("statusSub").textContent = "Leave the house. Help is on the way.";
   } else delete document.body.dataset.fire;
 
+  // Water leaks
+  const wet = CONFIG.leaks.filter((d) => entities[d.id]?.state === "on");
+  if (wet.length && !fires.length) {
+    document.body.dataset.leak = "";
+    $("leakText").textContent = `${wet.map((d) => d.label).join(" and ")} ${wet.length > 1 ? "are" : "is"} wet. Check the water heater and turn off the water if you can.`;
+  } else delete document.body.dataset.leak;
+
   // Night schedule
   renderNight();
 
@@ -815,7 +845,8 @@ function render() {
     const motion = e?.attributes?.device_class === "motion" || s.id.includes("motion");
     const cls = !e ? "gone" : on ? "open" : "";
     $("m" + i).setAttribute("class", "marker " + cls);
-    const word = !e ? "Offline" : motion ? (on ? "Movement" : "Still") : (on ? "Open" : "Closed");
+    const glass = s.kind === "glass";
+    const word = !e ? "Offline" : glass ? (on ? "Glass breaking!" : "Listening") : motion ? (on ? "Movement" : "Still") : (on ? "Open" : "Closed");
     return `<li class="${cls}"><span class="pip"></span><span class="nm">${escapeHtml(s.label || e?.attributes?.friendly_name || s.id)}</span><span class="st">${word}</span></li>`;
   }).join("");
 
@@ -847,6 +878,12 @@ function playSound(kind) {
     else if (kind === "alarm") { for (let i = 0; i < 8; i++) { tone(i % 2 ? 740 : 1046, i * 0.38, 0.34, 0.4, "sawtooth"); } }
   } catch {}
 }
+let leakWasOn = false;
+function watchLeak() {
+  const on = CONFIG.leaks.some((d) => entities[d.id]?.state === "on");
+  if (on && !leakWasOn) { playSound("warning"); try { navigator.vibrate?.([400, 150, 400, 150, 400]); } catch {} }
+  leakWasOn = on;
+}
 let fireWasOn = false;
 function watchFire() {
   const on = CONFIG.smoke.some((d) => entities[d.id]?.state === "on");
@@ -873,7 +910,7 @@ function watchDoors(first) {
       const armed = (entities[CONFIG.alarm]?.state || "").startsWith("armed") || ["pending", "triggered"].includes(entities[CONFIG.alarm]?.state);
       try { navigator.vibrate?.(armed ? [500, 150, 500, 150, 900] : [250, 120, 250]); } catch {}
       playSound(armed ? "warning" : "chime");
-      toast(`${s.label} opened`);
+      toast(s.kind === "glass" ? `${s.label}: glass breaking` : `${s.label} opened`);
     }
     lastSeen[s.id] = open;
   });
@@ -1208,6 +1245,8 @@ async function buildBriefing(opening) {
     const motion = e.attributes?.device_class === "motion" || s.id.includes("motion");
     if (!motion && (e.state === "on" || e.state === "open")) issues.push(`${s.label} is open`);
   });
+  CONFIG.leaks.forEach((d) => { if (entities[d.id]?.state === "on") issues.unshift(`${d.label} is wet`); });
+  CONFIG.smoke.forEach((d) => { if (entities[d.id]?.state === "on") issues.unshift(`${d.label} is going off`); });
   const ast = entities[CONFIG.alarm]?.state;
   if (ast === "triggered") issues.unshift("The alarm is going off");
   const unlocked = CONFIG.locks.filter((d) => entities[d.id]?.state === "unlocked").map((d) => d.id);
@@ -1450,6 +1489,7 @@ function askPin(title) {
 setInterval(() => conn && render(), 30000);
 connect(false);
 $("simBtn").onclick = () => { window.__simulateBreakIn(); toast("Garage door to the hallway opened. Disarm with 1234, or wait."); window.scrollTo({ top: 0, behavior: "smooth" }); };
+$("leakBtn").onclick = () => { window.__simulateLeak(); window.scrollTo({ top: 0, behavior: "smooth" }); };
 $("fireBtn").onclick = () => { window.__simulateFire(); window.scrollTo({ top: 0, behavior: "smooth" }); };
 document.querySelectorAll("[data-wx]").forEach((b) => b.onclick = () => window.__setWeather(b.dataset.wx));
 </script>
