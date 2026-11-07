@@ -1811,6 +1811,7 @@ setInterval(() => conn && render(), 30000);
 connect(false);
 $("simBtn").onclick = () => { window.__simulateBreakIn(); toast("Back door to the garage opened. Disarm with 1234, or wait."); window.scrollTo({ top: 0, behavior: "smooth" }); };
 $("leakBtn").onclick = () => { window.__simulateLeak(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+$("doors").insertAdjacentHTML("beforebegin", '<p class="note" style="margin:-4px 0 16px;padding:12px 14px;border-radius:14px;border:1px solid rgba(217,183,126,.3);background:rgba(217,183,126,.07)"><b style="color:var(--porch-hi)">Demo locks.</b> These don't move your real doors yet. Your Schlage and Kwikset connect once the Home Assistant box is set up.</p>');
 $("walk").querySelector(".note").textContent = "Demo: your real doors aren't connected yet. Tap each sensor below to pretend it was opened. In the real app, this ticks off on its own as you walk around.";
 $("walkList").addEventListener("click", (e) => { const r = e.target.closest("[data-id]"); if (r) window.__openDoor(r.dataset.id); });
 $("fireBtn").onclick = () => { window.__simulateFire(); window.scrollTo({ top: 0, behavior: "smooth" }); };
