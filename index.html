@@ -79,6 +79,29 @@
   body[data-state^="armed"] #house .glow, body[data-state="triggered"] #house .glow,
   body[data-state="pending"] #house .glow { opacity: .18; }
   body[data-state="triggered"] #house .shell { animation: alarm 1.1s ease-in-out infinite; }
+
+  /* ---------------- weather readout behind the house ---------------- */
+  .hero { position: relative; }
+  .skytemp { position: absolute; top: 0; left: 0; right: 0; z-index: 0; text-align: center; pointer-events: none; }
+  .skytemp .wxtemp { font-family: var(--display); font-weight: 400; font-size: 90px; line-height: .8; color: var(--paper);
+            letter-spacing: -.02em; text-shadow: 0 6px 44px rgba(0,0,0,.55), 0 1px 3px rgba(0,0,0,.4); opacity: .97; }
+  .skytemp .wxcond { font-size: 15px; font-weight: 600; color: var(--paper); text-transform: capitalize; letter-spacing: .02em;
+            margin-top: 4px; text-shadow: 0 1px 14px rgba(0,0,0,.65); }
+  .skytemp .wxhilo { font-size: 12.5px; color: var(--haze); letter-spacing: .06em; margin-top: 1px;
+            text-shadow: 0 1px 10px rgba(0,0,0,.6); }
+  #house { position: relative; z-index: 1; margin-top: 18px; }
+  .hero .speak { position: absolute; top: 0; right: 2px; z-index: 3; }
+  .today { margin: 2px 0 6px; padding: 2px 18px 8px; border-radius: 24px;
+           background: var(--glass); border: 1px solid var(--hair); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .today .tips li:first-child { border-top: none; }
+  @keyframes yglow { 0%, 100% { opacity: .55 } 50% { opacity: 1 } }
+  @keyframes wglow { 0%, 100% { opacity: .9 } 50% { opacity: 1 } }
+  #house .yl { animation: yglow 3.4s ease-in-out infinite; }
+  #house .winw { animation: wglow 7s ease-in-out infinite; }
+  #house .wxday, #house .wxrain, #house .wxsnow { opacity: 0; transition: opacity .9s ease; }
+  body[data-sky="sun"] #house .wxday, body[data-sky="partly"] #house .wxday { opacity: 1; }
+  body[data-sky="rain"] #house .wxrain, body[data-sky="storm"] #house .wxrain { opacity: 1; }
+  body[data-sky="snow"] #house .wxsnow { opacity: 1; }
   @keyframes alarm { 50% { fill: color-mix(in srgb, var(--flare) 38%, var(--dusk)); } }
   .marker circle.core { fill: var(--sage); stroke: color-mix(in srgb, var(--sage) 35%, var(--night)); stroke-width: 5; transition: all .3s; }
   .marker circle.ring { fill: none; stroke: var(--flare); stroke-width: 2; opacity: 0; }
@@ -366,6 +389,17 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 14px 30px -12px rgba(217,183,126,.6); }
   .cta:hover { filter: brightness(1.06); }
   #loginMsg { color: var(--porch); margin-top: 16px; min-height: 1.5em; }
+  #loginForm { display: flex; flex-direction: column; gap: 10px; max-width: 320px; margin: 18px auto 0; }
+  #login input { width: 100%; padding: 14px 16px; border-radius: 14px; font: 16px var(--ui); color: var(--paper);
+    background: rgba(255,255,255,.05); border: 1px solid var(--hair); }
+  #login input::placeholder { color: var(--haze); }
+  #login input:focus { outline: none; border-color: var(--porch); background: rgba(255,255,255,.08); }
+  #loginForm .cta { margin-top: 4px; }
+  .demoaccts { margin: 16px auto 0; max-width: 320px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    justify-content: center; font-size: 12.5px; color: var(--haze); }
+  .demoaccts .acct { padding: 6px 13px; border-radius: 99px; background: rgba(255,255,255,.05); border: 1px solid var(--hair);
+    color: var(--paper); font-size: 12.5px; font-weight: 600; }
+  .demoaccts .acct:hover { background: rgba(255,255,255,.1); }
   .porch-light { animation: porch 3.5s ease-in-out infinite; }
   @keyframes porch { 50% { opacity: .55; } }
 
@@ -439,9 +473,18 @@
       <rect x="126" y="84" width="26" height="22" rx="2" fill="#0d1322" stroke="#98a1ba" stroke-width="2"/>
     </svg>
     <h1><span class="brand-top">Gordon</span>Home Security</h1>
-    <p>Sign in with your Home Assistant account to watch and control your home. In this demo, just tap Sign in.</p>
-    <button class="cta" id="loginBtn">Sign in</button>
+    <p>Sign in to watch and control your home.</p>
+    <form id="loginForm" autocomplete="off">
+      <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" aria-label="Username" autocapitalize="none" spellcheck="false">
+      <input id="password" name="password" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password">
+      <button class="cta" id="loginBtn" type="submit">Sign in</button>
+    </form>
     <div id="loginMsg" role="status"></div>
+    <div class="demoaccts"><span>Demo logins — tap to fill:</span>
+      <button type="button" class="acct" data-acct="admin">Admin</button>
+      <button type="button" class="acct" data-acct="member">Family</button>
+      <button type="button" class="acct" data-acct="guest">Guest</button>
+    </div>
   </section>
 
   <!-- ======================= APP ======================= -->
@@ -468,52 +511,151 @@
       <p id="leakText"></p>
     </section>
 
-    <section class="brief" id="brief" aria-live="polite">
-      <div class="brief-top">
-        <div>
-          <h2 id="briefHello">Hello</h2>
-          <p class="wx" id="briefWx">Checking today's weather…</p>
-        </div>
-        <button class="speak" id="speakBtn" aria-label="Read my briefing out loud">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-        </button>
-      </div>
-      <ul class="tips" id="tips"></ul>
-      <div class="auto"><span>Read it out loud when I open the app</span>
-        <button class="switch" id="autoSpeak" role="switch" aria-checked="true" aria-label="Read the briefing out loud when the app opens"></button></div>
-    </section>
-
-    <div class="demo">
-      <p><b>Demo with sample data.</b> Nothing here controls a real home. Disarm code: 1234.</p>
-      <span style="display:grid;gap:6px"><button id="simBtn">Try a break-in</button><button id="fireBtn">Try a kitchen fire</button><button id="leakBtn">Try a water leak</button></span>
-    </div>
-    <div class="wxdemo" role="group" aria-label="Preview the weather background">
-      <span>Preview weather:</span>
-      <button data-wx="sunny">Sunny</button><button data-wx="partlycloudy">Partly cloudy</button><button data-wx="cloudy">Gloomy</button>
-      <button data-wx="rainy">Rain</button><button data-wx="lightning-rainy">Storm</button><button data-wx="snowy">Snow</button><button data-wx="clear-night">Night</button>
-    </div>
-
     <div class="hero">
+      <button class="speak" id="speakBtn" aria-label="Read my briefing out loud">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      </button>
+      <div class="skytemp" aria-live="polite">
+        <div class="wxtemp" id="heroTemp">—°</div>
+        <div class="wxcond" id="heroCond">Checking the sky…</div>
+        <div class="wxhilo" id="heroHiLo"></div>
+      </div>
       <svg id="house" viewBox="0 0 340 230" role="img" aria-label="Map of your townhouse and its sensors">
-        <ellipse class="glow" cx="175" cy="140" rx="180" ry="110"/>
-        <!-- garage (lower roof, left) -->
-        <path class="shell" d="M10 214 V118 L50 98 L90 118 V214 Z"/>
-        <g stroke="rgba(255,255,255,.09)" stroke-width="1.2">
-          <rect x="24" y="168" width="52" height="46" rx="2" fill="none"/>
-          <line x1="24" y1="183" x2="76" y2="183"/><line x1="24" y1="198" x2="76" y2="198"/>
+        <defs>
+          <linearGradient id="wallG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#313b50"/><stop offset="1" stop-color="#19212f"/></linearGradient>
+          <linearGradient id="wallG2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b4559"/><stop offset="1" stop-color="#232d40"/></linearGradient>
+          <linearGradient id="woodG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#855d39"/><stop offset="1" stop-color="#4a3420"/></linearGradient>
+          <linearGradient id="glassG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe7b0"/><stop offset=".55" stop-color="#f4bd6b"/><stop offset="1" stop-color="#cf8638"/></linearGradient>
+          <linearGradient id="roofG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#141c2c"/><stop offset="1" stop-color="#0b1018"/></linearGradient>
+          <radialGradient id="warmG" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffd089" stop-opacity=".95"/><stop offset="1" stop-color="#ffd089" stop-opacity="0"/></radialGradient>
+          <filter id="blurS" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.2"/></filter>
+          <filter id="blurL" x="-90%" y="-90%" width="280%" height="280%"><feGaussianBlur stdDeviation="7"/></filter>
+        </defs>
+
+        <ellipse class="glow" cx="175" cy="140" rx="185" ry="112"/>
+
+        <!-- back-yard light spilling up behind the house, and a back lamp -->
+        <ellipse cx="250" cy="58" rx="132" ry="34" fill="url(#warmG)" opacity=".3" filter="url(#blurL)"/>
+        <g class="yl" style="animation-delay:.2s"><rect x="69" y="96" width="2.4" height="54" fill="#28324a"/><circle cx="70" cy="96" r="9" fill="url(#warmG)" filter="url(#blurS)"/><circle cx="70" cy="96" r="2.1" fill="#fff1d2"/></g>
+
+        <!-- ground shadow -->
+        <ellipse cx="176" cy="216" rx="168" ry="12" fill="#05070c" opacity=".45" filter="url(#blurS)"/>
+
+        <!-- garage block -->
+        <rect class="shell" x="12" y="150" width="86" height="64" rx="2" fill="url(#wallG)"/>
+        <rect x="8" y="145" width="94" height="7" rx="2" fill="url(#roofG)"/>
+        <rect x="24" y="166" width="54" height="48" rx="2" fill="url(#wallG2)" stroke="rgba(255,255,255,.06)"/>
+        <g stroke="rgba(255,255,255,.06)" stroke-width="1"><line x1="24" y1="178" x2="78" y2="178"/><line x1="24" y1="190" x2="78" y2="190"/><line x1="24" y1="202" x2="78" y2="202"/></g>
+
+        <!-- main house: lower floor + cantilevered upper floor -->
+        <rect class="shell" x="96" y="120" width="234" height="94" fill="url(#wallG)"/>
+        <rect x="150" y="120" width="40" height="94" fill="url(#woodG)"/>
+        <g stroke="rgba(0,0,0,.22)" stroke-width="1"><line x1="160" y1="120" x2="160" y2="214"/><line x1="170" y1="120" x2="170" y2="214"/><line x1="180" y1="120" x2="180" y2="214"/></g>
+        <rect class="shell" x="112" y="60" width="224" height="62" fill="url(#wallG2)"/>
+        <rect x="92" y="114" width="244" height="8" rx="2" fill="url(#roofG)"/>
+        <rect x="106" y="54" width="232" height="8" rx="2" fill="url(#roofG)"/>
+        <rect x="106" y="54" width="232" height="1.4" fill="rgba(180,200,235,.22)"/>
+
+        <!-- warm window glow haze (behind panes) -->
+        <g filter="url(#blurL)" opacity=".5">
+          <rect x="196" y="150" width="60" height="64" fill="#ffcf85"/>
+          <rect x="276" y="136" width="42" height="42" fill="#ffcf85"/>
+          <rect x="118" y="72" width="170" height="36" fill="#ffcf85"/>
         </g>
-        <!-- main house -->
-        <path class="shell" d="M90 214 V92 L210 22 L330 92 V214 Z"/>
-        <line class="wall" x1="150" y1="92" x2="150" y2="214"/>
-        <line class="wall" x1="252" y1="92" x2="252" y2="214"/>
-        <line class="wall" x1="90" y1="92" x2="330" y2="92"/>
-        <text class="room" x="50" y="140" text-anchor="middle">Garage</text>
-        <text class="room" x="120" y="110" text-anchor="middle">Hall</text>
-        <text class="room" x="201" y="110" text-anchor="middle">Living room</text>
-        <text class="room" x="291" y="110" text-anchor="middle">Bedroom</text>
-        <rect x="108" y="182" width="22" height="32" rx="2" fill="none" stroke="var(--state)" stroke-width="1.6" opacity=".7"/>
-        <rect x="196" y="176" width="48" height="38" rx="2" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1.2"/><line x1="220" y1="176" x2="220" y2="214" stroke="rgba(255,255,255,.12)" stroke-width="1.2"/>
-        <rect x="270" y="140" width="40" height="28" rx="2" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="1.2"/>
+
+        <!-- warm windows -->
+        <rect class="winw" x="120" y="72" width="30" height="36" rx="1" fill="url(#glassG)"/>
+        <rect x="200" y="72" width="34" height="36" rx="1" fill="url(#glassG)"/>
+        <rect x="250" y="72" width="34" height="36" rx="1" fill="url(#glassG)"/>
+        <rect class="winw" x="196" y="150" width="60" height="64" rx="1" fill="url(#glassG)" style="animation-delay:1.2s"/>
+        <line x1="226" y1="150" x2="226" y2="214" stroke="rgba(0,0,0,.2)" stroke-width="1.4"/>
+        <rect x="276" y="136" width="42" height="42" rx="1" fill="url(#glassG)"/>
+        <line x1="297" y1="136" x2="297" y2="178" stroke="rgba(0,0,0,.2)" stroke-width="1.2"/>
+        <!-- front door + warm sidelight -->
+        <rect x="106" y="170" width="24" height="44" rx="1" fill="url(#woodG)"/>
+        <rect class="winw" x="133" y="172" width="7" height="42" fill="url(#glassG)" style="animation-delay:.7s"/>
+        <circle cx="126" cy="192" r="1.3" fill="#ffe9c2"/>
+        <!-- side door into garage -->
+        <rect x="84" y="176" width="12" height="38" rx="1" fill="url(#wallG2)" stroke="rgba(255,255,255,.06)"/>
+
+        <!-- facade up-lights -->
+        <ellipse cx="130" cy="212" rx="26" ry="10" fill="url(#warmG)" opacity=".32"/>
+        <ellipse cx="300" cy="212" rx="26" ry="10" fill="url(#warmG)" opacity=".28"/>
+
+        <!-- landscaping: shrubs + low hedge -->
+        <ellipse cx="30" cy="206" rx="26" ry="14" fill="#101a2c" opacity=".92"/>
+        <ellipse cx="23" cy="196" rx="15" ry="18" fill="#0e1828" opacity=".92"/>
+        <rect x="96" y="206" width="240" height="10" rx="5" fill="#122034" opacity=".85"/>
+
+        <!-- front walkway + glowing path lights -->
+        <path d="M120 214 L130 214 L152 230 L94 230 Z" fill="#1a2333" opacity=".8"/>
+        <g class="yl"><rect x="99" y="206" width="2" height="9" fill="#28324a"/><circle cx="100" cy="205" r="6" fill="url(#warmG)" filter="url(#blurS)"/><circle cx="100" cy="205" r="1.7" fill="#fff1d2"/></g>
+        <g class="yl" style="animation-delay:.9s"><rect x="151" y="208" width="2" height="9" fill="#28324a"/><circle cx="152" cy="207" r="6" fill="url(#warmG)" filter="url(#blurS)"/><circle cx="152" cy="207" r="1.7" fill="#fff1d2"/></g>
+        <g class="yl" style="animation-delay:1.8s"><rect x="90" y="220" width="2.4" height="10" fill="#28324a"/><circle cx="91" cy="219" r="7" fill="url(#warmG)" filter="url(#blurS)"/><circle cx="91" cy="219" r="2" fill="#fff1d2"/></g>
+        <g class="yl" style="animation-delay:2.6s"><rect x="162" y="222" width="2.4" height="10" fill="#28324a"/><circle cx="163" cy="221" r="7" fill="url(#warmG)" filter="url(#blurS)"/><circle cx="163" cy="221" r="2" fill="#fff1d2"/></g>
+        <!-- modern bollard by the door -->
+        <g class="yl" style="animation-delay:.4s"><rect x="142" y="196" width="3" height="18" rx="1.5" fill="#2a3346"/><circle cx="143.5" cy="196" r="6" fill="url(#warmG)" filter="url(#blurS)"/><circle cx="143.5" cy="196" r="1.8" fill="#fff1d2"/></g>
+
+        <!-- depth: shadowed right-side returns -->
+        <rect x="330" y="120" width="7" height="94" fill="#0f1623"/>
+        <rect x="336" y="60" width="4" height="62" fill="#0e1420"/>
+        <!-- driveway from the garage -->
+        <path d="M40 214 L82 214 L130 230 L2 230 Z" fill="#20283a" opacity=".6"/>
+        <!-- window mullions -->
+        <g stroke="rgba(48,30,14,.45)" stroke-width="1">
+          <line x1="196" y1="166" x2="256" y2="166"/><line x1="196" y1="184" x2="256" y2="184"/>
+          <line x1="276" y1="157" x2="318" y2="157"/>
+          <line x1="200" y1="90" x2="284" y2="90"/>
+        </g>
+        <!-- subtle glass reflection -->
+        <line x1="210" y1="152" x2="202" y2="210" stroke="rgba(255,255,255,.1)" stroke-width="3"/>
+        <!-- living-room interior hint: couch + lamp -->
+        <g opacity=".55"><rect x="204" y="190" width="26" height="16" rx="2" fill="#7a4e26"/><rect x="236" y="178" width="4" height="28" fill="#5e4023"/><circle cx="238" cy="176" r="5" fill="#fff0c2"/></g>
+        <!-- warm light pooling on the ground -->
+        <g filter="url(#blurS)" opacity=".4">
+          <ellipse cx="226" cy="217" rx="32" ry="5" fill="#ffcf85"/>
+          <ellipse cx="297" cy="181" rx="18" ry="4" fill="#ffcf85"/>
+          <ellipse cx="124" cy="216" rx="14" ry="4" fill="#ffcf85"/>
+        </g>
+        <!-- a fuller tree, front-left -->
+        <g>
+          <rect x="33" y="186" width="4.5" height="28" rx="1.5" fill="#221912"/>
+          <ellipse cx="35" cy="176" rx="21" ry="19" fill="#0f1a2a"/>
+          <ellipse cx="24" cy="184" rx="14" ry="14" fill="#0d1726"/>
+          <ellipse cx="47" cy="184" rx="13" ry="13" fill="#0d1726"/>
+          <ellipse cx="35" cy="169" rx="12" ry="12" fill="#101c2e"/>
+        </g>
+        <!-- daytime: windows read as "off", muted and cool -->
+        <g class="wxday">
+          <rect x="120" y="72" width="30" height="36" fill="#223049" opacity=".72"/>
+          <rect x="200" y="72" width="34" height="36" fill="#223049" opacity=".72"/>
+          <rect x="250" y="72" width="34" height="36" fill="#223049" opacity=".72"/>
+          <rect x="196" y="150" width="60" height="64" fill="#223049" opacity=".7"/>
+          <rect x="276" y="136" width="42" height="42" fill="#223049" opacity=".72"/>
+          <rect x="133" y="172" width="7" height="42" fill="#223049" opacity=".7"/>
+        </g>
+        <!-- rain: streaks down the panes + puddles -->
+        <g class="wxrain">
+          <g stroke="rgba(190,214,245,.5)" stroke-width="1">
+            <line x1="206" y1="154" x2="202" y2="210"/><line x1="222" y1="152" x2="218" y2="212"/><line x1="240" y1="156" x2="236" y2="208"/>
+            <line x1="286" y1="140" x2="283" y2="174"/><line x1="304" y1="140" x2="301" y2="176"/>
+            <line x1="128" y1="76" x2="126" y2="104"/><line x1="214" y1="76" x2="212" y2="104"/><line x1="262" y1="76" x2="260" y2="104"/>
+          </g>
+          <g filter="url(#blurS)">
+            <ellipse cx="226" cy="217" rx="40" ry="4.5" fill="#5a7bb0" opacity=".5"/>
+            <ellipse cx="120" cy="218" rx="24" ry="3.5" fill="#5a7bb0" opacity=".45"/>
+            <ellipse cx="300" cy="182" rx="18" ry="3" fill="#5a7bb0" opacity=".4"/>
+          </g>
+        </g>
+        <!-- snow: settled on the roofs, sills and ground -->
+        <g class="wxsnow" fill="#eef3fb">
+          <rect x="104" y="50" width="236" height="5" rx="2.5"/>
+          <rect x="90" y="110" width="247" height="5" rx="2.5"/>
+          <rect x="6" y="141" width="97" height="4" rx="2"/>
+          <rect x="118" y="70" width="34" height="2.5" rx="1.2"/><rect x="198" y="70" width="88" height="2.5" rx="1.2"/>
+          <rect x="194" y="148" width="64" height="2.5" rx="1.2"/><rect x="274" y="134" width="46" height="2.5" rx="1.2"/>
+          <rect x="0" y="212" width="340" height="7" rx="3" opacity=".55"/>
+        </g>
         <g id="markers"></g>
       </svg>
       <h1 class="state-word" id="statusText">Connecting…</h1>
@@ -524,6 +666,20 @@
         <button id="modeHome" aria-pressed="false">Home<small>Doors, windows</small></button>
         <button id="modeAway" aria-pressed="false">Away<small>Everything</small></button>
       </div>
+    </div>
+
+    <section class="today" id="todayBlock" aria-live="polite">
+      <ul class="tips" id="tips"></ul>
+    </section>
+
+    <div class="demo">
+      <p><b>Demo with sample data.</b> Nothing here controls a real home. Disarm code: 1234.</p>
+      <span style="display:grid;gap:6px"><button id="simBtn">Try a break-in</button><button id="fireBtn">Try a kitchen fire</button><button id="leakBtn">Try a water leak</button></span>
+    </div>
+    <div class="wxdemo" role="group" aria-label="Preview the weather background">
+      <span>Preview weather:</span>
+      <button data-wx="sunny">Sunny</button><button data-wx="partlycloudy">Partly cloudy</button><button data-wx="cloudy">Gloomy</button>
+      <button data-wx="rainy">Rain</button><button data-wx="lightning-rainy">Storm</button><button data-wx="snowy">Snow</button><button data-wx="clear-night">Night</button>
     </div>
 
     <section class="block" id="nightBlock">
@@ -831,7 +987,7 @@ ents["input_boolean.security_night_schedule"]={state:"on",attributes:{}};
 ents["input_boolean.security_morning_disarm"]={state:"off",attributes:{}};
 ents["input_datetime.security_night_arm"]={state:"23:00:00",attributes:{}};
 ents["input_datetime.security_morning_disarm"]={state:"06:30:00",attributes:{}};
-ents["weather.forecast_home"]={state:"partlycloudy",attributes:{temperature:48,high:54,low:39}};
+{const __h=new Date().getHours(),__night=__h<7||__h>=18;ents["weather.forecast_home"]={state:__night?"clear-night":"sunny",attributes:{temperature:__night?46:58,high:60,low:44}};}
 const WX={sunny:[84,88,70],partlycloudy:[66,70,55],cloudy:[56,59,47],rainy:[52,55,46],"lightning-rainy":[74,79,66],snowy:[28,31,22],"clear-night":[45,54,39]};
 window.__setWeather=(c)=>{const [t,h,l]=WX[c]; ents["weather.forecast_home"]={state:c,attributes:{temperature:t,high:h,low:l},last_changed:new Date().toISOString()};
   ents["sun.sun"]={state:c==="clear-night"?"below_horizon":"above_horizon",attributes:{}}; push();};
@@ -851,7 +1007,7 @@ const setS=(id,state)=>{ents[id]={...ents[id],state,last_changed:new Date().toIS
 const later=(ms,f)=>timers.push(setTimeout(f,ms));
 async function getAuth(){return {}}
 async function createConnection(){return {addEventListener(){}}}
-async function getUser(){return {name:"Guest",is_admin:true}}
+async function getUser(){return demoUser || {name:"Guest",is_admin:false,role:"guest"}}
 function subscribeEntities(c,cb){listener=cb;cb(ents)}
 const AL="alarm_control_panel.home_security";
 async function callService(conn,domain,service,data={},target={},returnResponse){
@@ -890,7 +1046,7 @@ window.__simulateBreakIn=()=>{
 
 const $ = (id) => document.getElementById(id);
 const TOKEN_KEY = "hs_tokens";
-let conn = null, entities = {}, userName = "", userIsAdmin = false, alarmPromptShown = false;
+let conn = null, entities = {}, userName = "", userIsAdmin = false, userRole = "guest", demoUser = null, alarmPromptShown = false;
 
 const store = {
   load() { try { return JSON.parse(localStorage.getItem(TOKEN_KEY)) || undefined; } catch { return undefined; } },
@@ -914,6 +1070,7 @@ async function connect(interactive) {
     conn = await createConnection({ auth });
     const me = await getUser(conn);
     userName = me.name; userIsAdmin = !!(me.is_admin || me.is_owner);
+    userRole = me.role || (userIsAdmin ? "admin" : "member"); applyRole();
     $("who").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
     $("login").classList.add("hidden");
     $("app").classList.remove("hidden");
@@ -928,7 +1085,33 @@ async function connect(interactive) {
       "Can't reach Home Assistant. Check the address and your internet connection.";
   }
 }
-$("loginBtn").onclick = () => connect(true);
+const ACCOUNTS = {
+  admin:  { pw: "admin123",  name: "Donn Gordon",   role: "admin"  },
+  member: { pw: "member123", name: "Family Member", role: "member" },
+  guest:  { pw: "guest123",  name: "Guest",         role: "guest"  },
+};
+const PERMS = {
+  admin:  { arm: true,  unlock: true,  manage: true  },
+  member: { arm: true,  unlock: true,  manage: false },
+  guest:  { arm: false, unlock: false, manage: false },
+};
+const can = (p) => !!(PERMS[userRole] && PERMS[userRole][p]);
+function applyRole() {
+  document.body.setAttribute("data-role", userRole);
+  ["manageUsers", "manageCodes"].forEach((id) => { const el = $(id); if (el) el.style.display = can("manage") ? "" : "none"; });
+}
+$("loginForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const u = ($("username").value || "").trim().toLowerCase(), p = $("password").value || "";
+  const a = ACCOUNTS[u];
+  if (!a || a.pw !== p) { $("loginMsg").textContent = "Wrong username or password."; return; }
+  demoUser = { name: a.name, is_admin: a.role === "admin", role: a.role };
+  $("loginMsg").textContent = ""; connect(true);
+});
+document.querySelectorAll(".demoaccts .acct").forEach((b) => b.onclick = () => {
+  const a = ACCOUNTS[b.dataset.acct]; if (!a) return;
+  $("username").value = b.dataset.acct; $("password").value = a.pw; $("loginMsg").textContent = "";
+});
 $("logoutBtn").onclick = () => { store.save(null); location.reload(); };
 
 function greeting() {
@@ -1129,9 +1312,10 @@ async function run(done, domain, service, data, target) {
   catch (e) { toast(e?.message || "Home Assistant didn't accept that. Try again."); return false; }
 }
 
-$("modeHome").onclick = () => run("Armed for Home", "alarm_control_panel", "alarm_arm_home", {}, { entity_id: CONFIG.alarm });
-$("modeAway").onclick = () => run("Arming for Away. Leave now.", "alarm_control_panel", "alarm_arm_away", {}, { entity_id: CONFIG.alarm });
+$("modeHome").onclick = () => { if (!can("arm")) return toast("Your account can't change the alarm."); run("Armed for Home", "alarm_control_panel", "alarm_arm_home", {}, { entity_id: CONFIG.alarm }); };
+$("modeAway").onclick = () => { if (!can("arm")) return toast("Your account can't change the alarm."); run("Arming for Away. Leave now.", "alarm_control_panel", "alarm_arm_away", {}, { entity_id: CONFIG.alarm }); };
 $("modeOff").onclick = async () => {
+  if (!can("arm")) return toast("Your account can't change the alarm.");
   const code = await askPin("Enter your code to disarm");
   if (code) run("Alarm is off", "alarm_control_panel", "alarm_disarm", { code }, { entity_id: CONFIG.alarm });
 };
@@ -1171,6 +1355,7 @@ $("doors").innerHTML = CONFIG.locks.map((d, i) =>
 CONFIG.locks.forEach((d, i) => {
   const dial = $("lockDial" + i);
   dial.addEventListener("click", async () => {
+    if (!can("unlock")) return toast("Your account can't lock or unlock doors.");
     if (dial.disabled) return toast(`${d.label} lock isn't responding`);
     if (dial.classList.contains("locked")) {
       const ok = await confirmSheet({ title: `Unlock ${d.label.toLowerCase()}?`, text: "Anyone can open the door once it's unlocked.", yes: "Unlock", icon: ICO_UNLOCK });
@@ -1183,7 +1368,7 @@ $("fireFalse").onclick = () => {
   run("Siren off", "siren", "turn_off", {}, { entity_id: "all" });
 };
 $("fireCall").onclick = () => { $("fireNote").textContent = "Dial 911 on your phone now."; location.href = "tel:911"; };
-$("lockAll").onclick = () => run("Locking all doors", "lock", "lock", {}, { entity_id: CONFIG.locks.map((d) => d.id) });
+$("lockAll").onclick = () => { if (!can("unlock")) return toast("Your account can't lock or unlock doors."); run("Locking all doors", "lock", "lock", {}, { entity_id: CONFIG.locks.map((d) => d.id) }); };
 $("alarmDial").addEventListener("click", async () => { $("alarmDlg").close(); await unlockForResponders(); });
 $("alarmLater").onclick = () => $("alarmDlg").close();
 
@@ -1221,14 +1406,89 @@ $("allOff").onclick = () => run("All lights off", "light", "turn_off", {}, { ent
 /* ---------------- live weather background ---------------- */
 const Sky = (() => {
   const cv = $("sky"), ctx = cv.getContext("2d");
-  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let W = 0, H = 0, scene = null, stars = [], clouds = [], drops = [], flakes = [], motes = [], birds = [];
+  const still = false;   // the living sky is the signature of this app — always animate it
+  let W = 0, H = 0, scene = null, stars = [], clouds = [], drops = [], flakes = [], motes = [], birds = [], planets = [];
   let nextFlock = 0, flash = 0, nextFlash = 0, shooting = null, nextShoot = 0, last = 0, raf = 0;
+  let forest = [], fog = [], hawk = null, nextHawk = 0;
   const rnd = (a, b) => a + Math.random() * (b - a);
 
   function size() {
     const d = Math.min(2, devicePixelRatio || 1);
     W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0);
+    buildForest();
+  }
+  // A ridge of fir silhouettes, rendered once to an offscreen sprite then layered for depth.
+  function ridgeSprite(h, color, dens) {
+    const c = document.createElement("canvas"); c.width = Math.max(1, W); c.height = h;
+    const x = c.getContext("2d"); x.fillStyle = color;
+    const base = h, step = Math.max(14, W / (26 * dens));
+    let px = -step; x.beginPath(); x.moveTo(0, base);
+    while (px < W + step) {
+      const tw = step * rnd(0.85, 1.5), top = Math.max(2, base - h * rnd(0.4, 0.98) * dens);
+      x.lineTo(px, base); x.lineTo(px + tw * 0.5, top); x.lineTo(px + tw, base);
+      px += tw * rnd(0.45, 0.72);
+    }
+    x.lineTo(W, base); x.lineTo(W, h); x.lineTo(0, h); x.closePath(); x.fill();
+    return c;
+  }
+  function buildForest() {
+    forest = [
+      { sp: ridgeSprite(Math.round(H * .34), "rgba(150,170,205,0.18)", 0.6), base: H * .70 },
+      { sp: ridgeSprite(Math.round(H * .42), "rgba(78,98,140,0.34)", 0.95), base: H * .85 },
+      { sp: ridgeSprite(Math.round(H * .52), "rgba(18,28,52,0.64)", 1.35), base: H + 6 },
+    ];
+    fog = [{ x: rnd(0, W), y: H * .56, o: .13, ph: 0, v: 9 }, { x: rnd(0, W), y: H * .69, o: .11, ph: 2.1, v: 6.5 }, { x: rnd(0, W), y: H * .80, o: .09, ph: 4.2, v: 5 }];
+    if (!nextHawk) nextHawk = performance.now() + 3500;
+  }
+  // Volumetric light shafts breaking through the mist.
+  function drawRays(t, a) {
+    if (a <= 0.02) return;
+    const ox = W * 0.68, oy = -H * 0.12;
+    ctx.save(); ctx.globalCompositeOperation = "screen";
+    for (let i = 0; i < 5; i++) {
+      const ang = -0.95 + i * 0.1, op = a * (0.45 + 0.55 * (0.5 + 0.5 * Math.sin(t * 0.25 + i * 1.6)));
+      ctx.save(); ctx.translate(ox, oy); ctx.rotate(ang);
+      const g = ctx.createLinearGradient(0, 0, 0, H * 1.15);
+      g.addColorStop(0, "rgba(210,226,248,0)"); g.addColorStop(0.12, `rgba(210,226,248,${op * 0.5})`);
+      g.addColorStop(0.5, `rgba(200,220,245,${op * 0.22})`); g.addColorStop(1, "rgba(200,220,245,0)");
+      ctx.fillStyle = g; ctx.fillRect(-16 - i * 2, 0, 30 + i * 3, H * 1.25); ctx.restore();
+    }
+    ctx.restore();
+  }
+  function drawForest(t, dt) {
+    const night = scene === "night" || scene === "nightcloud";
+    const rayA = ({ sun: .55, partly: .4, gloomy: .22, snow: .2, rain: .14, storm: .12, night: .08, nightcloud: .06 })[scene] ?? .25;
+    if (forest[0]) ctx.drawImage(forest[0].sp, 0, forest[0].base - forest[0].sp.height);
+    drawRays(t, rayA * (night ? .5 : 1));
+    for (let i = 1; i < forest.length; i++) { const r = forest[i]; ctx.drawImage(r.sp, 0, r.base - r.sp.height); }
+    fog.forEach((f) => {
+      f.x += f.v * dt; const span = W + 420, wx = ((f.x % span) + span) % span - 210;
+      const o = f.o * (0.65 + 0.35 * Math.sin(t * 0.2 + f.ph));
+      [wx - span, wx, wx + span].forEach((cx) => {
+        const g = ctx.createRadialGradient(cx, f.y, 0, cx, f.y, 220);
+        g.addColorStop(0, `rgba(200,214,232,${o})`); g.addColorStop(1, "rgba(200,214,232,0)");
+        ctx.fillStyle = g; ctx.save(); ctx.translate(cx, f.y); ctx.scale(1, 0.26); ctx.beginPath(); ctx.arc(0, 0, 220, 0, 6.3); ctx.fill(); ctx.restore();
+      });
+    });
+  }
+  function spawnHawk(now) {
+    const dir = Math.random() < .5 ? 1 : -1;
+    hawk = { x: dir > 0 ? -90 : W + 90, y: rnd(H * .14, H * .32), v: rnd(24, 40) * dir, s: rnd(22, 30), p: rnd(0, 6.3) };
+    nextHawk = now + rnd(16000, 30000);
+  }
+  function drawHawk(t) {
+    if (!hawk) return;
+    const b = hawk, span = b.s * 1.35, flex = Math.sin(t * 0.9 + b.p) * 0.16;
+    ctx.save(); ctx.translate(b.x, b.y); ctx.scale(b.v < 0 ? -1 : 1, 1); ctx.fillStyle = "rgba(16,20,30,.85)";
+    ctx.beginPath(); ctx.ellipse(0, 0, b.s * 0.5, b.s * 0.13, 0, 0, 6.3); ctx.fill();
+    ctx.beginPath(); ctx.arc(b.s * 0.52, 0, b.s * 0.1, 0, 6.3); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-b.s * 0.05, 0);
+    ctx.quadraticCurveTo(-b.s * 0.25, -span * (0.55 + flex), -b.s * 0.55, -span * (0.62 + flex));
+    ctx.quadraticCurveTo(-b.s * 0.12, -span * 0.18, b.s * 0.12, 0);
+    ctx.quadraticCurveTo(-b.s * 0.12, span * 0.18, -b.s * 0.55, span * (0.62 - flex));
+    ctx.quadraticCurveTo(-b.s * 0.25, span * (0.55 - flex), -b.s * 0.05, 0); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-b.s * 0.45, 0); ctx.lineTo(-b.s * 0.72, -b.s * 0.14); ctx.lineTo(-b.s * 0.72, b.s * 0.14); ctx.closePath(); ctx.fill();
+    ctx.restore();
   }
   function pick(cond, day) {
     if (["rainy", "pouring"].includes(cond)) return "rain";
@@ -1241,7 +1501,12 @@ const Sky = (() => {
   }
   function build() {
     const has = (...k) => k.includes(scene);
-    stars = has("night", "nightcloud") ? Array.from({ length: 80 }, () => ({ x: rnd(0, W), y: rnd(0, H * .62), r: rnd(.4, 1.5), p: rnd(0, 6.3) })) : [];
+    stars = has("night", "nightcloud") ? Array.from({ length: scene === "night" ? 130 : 70 }, () => ({ x: rnd(0, W), y: rnd(0, H * .6), r: rnd(.4, 1.6), p: rnd(0, 6.3) })) : [];
+    planets = has("night", "nightcloud") ? [
+      { x: W * .20, y: H * .17, r: 3.2, c: "255,150,110", glow: 17, drift: -.26 },
+      { x: W * .50, y: H * .10, r: 2.3, c: "190,210,255", glow: 12, drift: -.2 },
+      { x: W * .72, y: H * .22, r: 3.6, c: "235,205,150", glow: 19, drift: -.16, ring: true },
+    ] : [];
     const nC = { partly: 3, gloomy: 7, rain: 6, storm: 7, snow: 5, nightcloud: 4 }[scene] || 0;
     clouds = Array.from({ length: nC }, (_, i) => ({ x: rnd(-200, W), y: rnd(20, H * .45), s: rnd(.7, 1.5), v: rnd(4, 11) * (scene === "storm" ? 2 : 1) }));
     drops = has("rain", "storm") ? Array.from({ length: scene === "storm" ? 140 : 100 }, () => ({ x: rnd(0, W), y: rnd(-H, H), l: rnd(10, 22), v: rnd(380, 620) })) : [];
@@ -1295,8 +1560,17 @@ const Sky = (() => {
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, 90, 0, 6.3); ctx.fill();
       ctx.fillStyle = "rgba(244,241,234,.92)"; ctx.beginPath(); ctx.arc(mx, my, 22, 0, 6.3); ctx.fill();
       ctx.globalCompositeOperation = "destination-out"; ctx.beginPath(); ctx.arc(mx + 10, my - 6, 19, 0, 6.3); ctx.fill(); ctx.globalCompositeOperation = "source-over";
+      // planets — Mars and friends, drifting slowly across the night
+      planets.forEach((p) => {
+        p.x += p.drift * dt * 16; if (p.x < -24) p.x = W + 24;
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.glow);
+        g.addColorStop(0, `rgba(${p.c},.5)`); g.addColorStop(1, `rgba(${p.c},0)`);
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.glow, 0, 6.3); ctx.fill();
+        ctx.fillStyle = `rgba(${p.c},.95)`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.3); ctx.fill();
+        if (p.ring) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(-.5); ctx.scale(1, .4); ctx.strokeStyle = `rgba(${p.c},.55)`; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, p.r * 2.2, 0, 6.3); ctx.stroke(); ctx.restore(); }
+      });
       if (scene === "night") {
-        if (!shooting && now > nextShoot) { shooting = { x: rnd(W * .1, W * .7), y: rnd(10, H * .3), l: 0 }; nextShoot = now + rnd(6000, 12000); }
+        if (!shooting && now > nextShoot) { shooting = { x: rnd(W * .1, W * .7), y: rnd(10, H * .3), l: 0 }; nextShoot = now + rnd(2800, 6500); }
         if (shooting) {
           shooting.l += dt * 900; const x = shooting.x + shooting.l, y = shooting.y + shooting.l * .45;
           const g2 = ctx.createLinearGradient(x - 90, y - 40, x, y); g2.addColorStop(0, "rgba(255,255,255,0)"); g2.addColorStop(1, "rgba(255,255,255,.85)");
@@ -1305,6 +1579,8 @@ const Sky = (() => {
         }
       }
     }
+    // misty forest backdrop (fir ridges, light shafts, drifting fog)
+    drawForest(t, dt);
     // dust motes in sunshine
     motes.forEach((m) => { m.y -= m.v * dt; m.x += Math.sin(t + m.p) * .15; if (m.y < -5) { m.y = H + 5; m.x = rnd(0, W); }
       ctx.fillStyle = `rgba(255,228,180,${.18 + .2 * Math.sin(t * 2 + m.p)})`; ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 6.3); ctx.fill(); });
@@ -1322,6 +1598,9 @@ const Sky = (() => {
       });
       birds = birds.filter((b) => b.x > -120 && b.x < W + 120);
     }
+    // soaring hawk, gliding across now and then
+    if (!hawk && now > nextHawk) spawnHawk(now);
+    if (hawk) { hawk.x += hawk.v * dt; hawk.y += Math.sin(t * .5 + hawk.p) * .15; drawHawk(t); if (hawk.x < -170 || hawk.x > W + 170) hawk = null; }
     // rain
     if (drops.length) {
       ctx.strokeStyle = "rgba(190,210,240,.32)"; ctx.lineWidth = 1.1; ctx.beginPath();
@@ -1348,7 +1627,7 @@ const Sky = (() => {
   document.addEventListener("visibilitychange", () => { if (document.hidden) cancelAnimationFrame(raf); else start(); });
   size();
   return {
-    set(cond, day) { const next = pick(cond, day); if (next === scene) return; scene = next; build(); start(); },
+    set(cond, day) { const next = pick(cond, day); document.body.setAttribute("data-sky", next); if (next === scene) return; scene = next; build(); start(); },
   };
 })();
 // Before sign-in: sunshine by day, stars at night.
@@ -1389,7 +1668,6 @@ function scheduleBriefing() { clearTimeout(briefTimer); briefTimer = setTimeout(
 async function buildBriefing(opening) {
   await loadForecast();
   const name = (userName || "").split(" ")[0];
-  $("briefHello").textContent = `${greeting()}${name ? ", " + name : ""}.`;
   const say = [`${greeting()}${name ? ", " + name : ""}.`];
   const tips = [];
 
@@ -1400,11 +1678,16 @@ async function buildBriefing(opening) {
   const isDay = entities["sun.sun"] ? entities["sun.sun"].state === "above_horizon" : (new Date().getHours() >= 7 && new Date().getHours() < 18);
   Sky.set(w?.state || forecast?.condition, isDay);
   if (outside != null) {
-    $("briefWx").innerHTML = `<b>${R(outside)}${U()} outside</b>${cond ? ", " + cond : ""}` +
-      (high != null ? `. Today ${low != null ? R(low) + U() + " to " : "up to "}${R(high)}${U()}.` : ".");
+    $("heroTemp").textContent = `${R(outside)}${U()}`;
+    $("heroCond").textContent = cond || (isDay ? "Clear" : "Clear night");
+    $("heroHiLo").textContent = high != null ? `H ${R(high)}${U()}   L ${low != null ? R(low) : "–"}${U()}` : "";
     say.push(`It's ${R(outside)} degrees outside${cond ? " and " + cond : ""}.` +
       (high != null ? ` Today's high is ${R(high)}${low != null ? ", with a low of " + R(low) : ""}.` : ""));
-  } else $("briefWx").textContent = "Weather isn't available right now.";
+  } else {
+    $("heroTemp").textContent = `—${U()}`;
+    $("heroCond").textContent = "Weather unavailable";
+    $("heroHiLo").textContent = "";
+  }
 
   // Thermostat advice, balanced against the weather
   const t = entities[CONFIG.thermostat];
@@ -1506,11 +1789,6 @@ function speak(auto) {
   synth.speak(u);
 }
 $("speakBtn").onclick = () => { unlockAudio(); speak(false); };
-$("autoSpeak").setAttribute("aria-checked", prefs.get("autoSpeak", true));
-$("autoSpeak").onclick = () => {
-  const v = !prefs.get("autoSpeak", true); prefs.set("autoSpeak", v);
-  $("autoSpeak").setAttribute("aria-checked", v); toast(v ? "The app will read your briefing when it opens" : "The app won't read out loud");
-};
 setInterval(() => conn && !document.hidden && buildBriefing(false), 10 * 60e3);
 document.addEventListener("visibilitychange", () => { if (!document.hidden && conn) buildBriefing(true); });
 
@@ -1523,7 +1801,7 @@ $("closeSettings").onclick = closeSettings;
 function renderSettings() {
   $("mono").textContent = initials(userName);
   $("pName").textContent = userName || "You";
-  $("pRole").textContent = userIsAdmin ? "Administrator" : "Member";
+  $("pRole").textContent = { admin: "Administrator", member: "Family member", guest: "Guest" }[userRole] || "Member";
   $("pRole").classList.toggle("member", !userIsAdmin);
   document.querySelectorAll(".admin-only").forEach((el) => el.style.display = userIsAdmin ? "" : "none");
 
@@ -1568,7 +1846,6 @@ function renderSettings() {
 document.querySelectorAll("[data-pref]").forEach((b) => b.onclick = () => {
   const k = b.dataset.pref, v = b.getAttribute("aria-checked") !== "true";
   prefs.set(k, v); b.setAttribute("aria-checked", v);
-  if (k === "autoSpeak") $("autoSpeak").setAttribute("aria-checked", v);
   toast({ sound: "Sound", vibrate: "Vibration", autoSpeak: "Talking briefing", chimeOff: "Door chime" }[k] + (v ? " on" : " off"));
 });
 $("manageUsers").onclick = () => { location.href = (CONFIG.hassUrl || location.origin).replace(/\/$/, "") + "/config/person"; };
