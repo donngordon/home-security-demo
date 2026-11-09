@@ -228,6 +228,16 @@
   "use strict";
   var ACCOUNT = { email:"customer@demo.com", pw:"demo123" };
 
+  // ============================================================
+  //  STRIPE PAYMENTS — paste your Stripe recurring Payment Link
+  //  URL below (create it free at dashboard.stripe.com → Payment
+  //  Links → recurring, $29.99/mo). When set, the Pay button sends
+  //  the customer to Stripe's secure hosted checkout. Card details
+  //  never touch this page. Leave blank to keep the demo flow.
+  //  Example: "https://buy.stripe.com/abc123"
+  var STRIPE_PAYMENT_LINK = "";
+  // ============================================================
+
   var login=document.getElementById('login'), portal=document.getElementById('portal');
   var form=document.getElementById('loginForm'), err=document.getElementById('loginerr');
 
@@ -258,9 +268,13 @@
       '<button class="btn btn-gold" id="payGo">Pay securely</button>'+
       '<div class="prov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4" stroke-linecap="round"/></svg>Secured by PCI-compliant checkout</div>'+
       '<div class="mlink" id="payCancel">Cancel</div>';
-    document.getElementById('payGo').addEventListener('click',payProcessing);
+    document.getElementById('payGo').addEventListener('click',payGo);
     document.getElementById('payCancel').addEventListener('click',closeModal);
     openModal();
+  }
+  function payGo(){
+    if(STRIPE_PAYMENT_LINK){ window.location.href = STRIPE_PAYMENT_LINK; return; }
+    payProcessing();
   }
   function payProcessing(){
     mbox.innerHTML='<div class="spin"></div><div style="font-family:var(--display);font-size:24px;margin-bottom:6px">Connecting to secure checkout…</div><div class="mlbl">Redirecting you to our payment provider</div>';
