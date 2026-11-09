@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  @page { size: Letter; margin: 0; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --navy:#0e1530; --navy2:#0a1020; --ink:#17203a; --muted:#5b6880;
+    --g1:#f7e3b4; --g2:#e6ba6a; --g3:#c7983f; --gold:#c7983f; --paper:#fbf9f4; --line:#e7e1d3;
+    --display:'Instrument Serif',Georgia,serif; --ui:'Plus Jakarta Sans',system-ui,sans-serif;
+  }
+  html,body{width:8.5in;height:11in}
+  body{font-family:var(--ui);color:var(--ink);background:var(--paper);display:flex;flex-direction:column}
+  .gold{color:var(--gold)}
+  .goldgrad{background:linear-gradient(180deg,var(--g1),var(--g2) 50%,var(--g3));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* header band */
+  .head{background:
+      radial-gradient(70% 120% at 88% 0%,rgba(230,186,106,.18),transparent 55%),
+      linear-gradient(135deg,var(--navy),var(--navy2));
+    color:#f3efe6;padding:.42in .55in .40in;}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .brand svg{width:40px;height:40px}
+  .brand .bt{font-family:var(--display);font-size:27px;line-height:1}
+  .brand .bs{font-size:10px;letter-spacing:5px;color:var(--g2);font-weight:700;margin-top:3px}
+  .brand .bcol{display:flex;flex-direction:column}
+  .kick{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--g2);font-weight:700;margin-bottom:8px}
+  .head h1{font-family:var(--display);font-weight:400;font-size:40px;line-height:1.05;max-width:9.5in}
+  .head p{color:#b9c4d8;font-size:13.5px;margin-top:8px;max-width:6.3in}
+
+  /* body */
+  .body{flex:1;padding:.34in .55in .2in;display:grid;grid-template-columns:1.25fr 1fr;gap:28px}
+  .sec-t{font-family:var(--display);font-size:21px;color:var(--navy);margin-bottom:11px}
+  ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  li{display:flex;gap:10px;font-size:12.5px;line-height:1.4;align-items:flex-start}
+  li .ck{width:17px;height:17px;flex:none;border-radius:5px;display:grid;place-items:center;margin-top:1px;
+    background:linear-gradient(180deg,var(--g1),var(--g3))}
+  li .ck svg{width:10px;height:10px;color:#2a1e06}
+  li b{font-weight:700}
+  .addon li .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex:none;margin-top:5px}
+  .provide{margin-top:20px}
+  .provide li{font-size:12.5px}
+
+  .pricebox{margin-top:20px;border:1.5px solid var(--gold);border-radius:12px;overflow:hidden}
+  .pricebox .ph{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#f3efe6;padding:10px 14px;font-weight:700;font-size:13px;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center}
+  .pricebox .ph span{font-size:10.5px;color:var(--g2);font-weight:600;letter-spacing:1px;text-transform:uppercase}
+  .prow{display:flex;justify-content:space-between;gap:10px;padding:8px 14px;font-size:12px;border-top:1px solid var(--line)}
+  .prow:first-of-type{border-top:none}
+  .prow .lbl{color:var(--ink)}
+  .prow .val{font-weight:700;color:var(--gold);white-space:nowrap}
+  .prow.big .lbl{font-weight:700}
+  .prow.big .val{font-size:14px}
+  .finenote{font-size:10px;color:var(--muted);padding:8px 14px 10px}
+
+  /* warranty strip */
+  .warr{margin:0 .55in;padding:12px 16px;background:#f4efe3;border:1px solid var(--line);border-radius:10px;
+    display:flex;gap:11px;align-items:center;font-size:11.5px;color:var(--ink)}
+  .warr svg{width:20px;height:20px;color:var(--gold);flex:none}
+  .warr b{font-weight:700}
+
+  /* footer */
+  .foot{margin-top:14px;background:linear-gradient(135deg,var(--navy),var(--navy2));color:#f3efe6;
+    padding:.26in .55in;display:flex;justify-content:space-between;align-items:center;gap:16px}
+  .foot .cta{font-family:var(--display);font-size:22px}
+  .foot .cta span{color:var(--g2)}
+  .foot .contact{text-align:right;font-size:12px;color:#c3cde0;line-height:1.7}
+  .foot .contact b{color:#f3efe6;font-weight:700}
+  .pill{display:inline-block;background:linear-gradient(180deg,var(--g1),var(--g3));color:#2a1e06;font-weight:700;
+    font-size:12px;padding:8px 16px;border-radius:999px;margin-top:6px}
+</style>
+</head>
+<body>
+
+  <div class="head">
+    <div class="brand">
+      <svg viewBox="0 0 100 100" fill="none">
+        <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7e3b4"/><stop offset=".5" stop-color="#e6ba6a"/><stop offset="1" stop-color="#c7983f"/></linearGradient></defs>
+        <circle cx="50" cy="50" r="47" stroke="url(#g)" stroke-width="0.8" opacity=".4"/>
+        <path d="M24 85 V41 L50 16 L76 41 V85 Z" stroke="url(#g)" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <text x="50" y="70" text-anchor="middle" font-family="'Instrument Serif',Georgia,serif" font-weight="700" font-size="46" fill="url(#g)">G</text>
+      </svg>
+      <span class="bcol"><span class="bt">Gordon</span><span class="bs">PROTECTION</span></span>
+    </div>
+    <div class="kick">Starlink &amp; Internet Installation</div>
+    <h1>Get connected — <span class="goldgrad">even where no one else reaches.</span></h1>
+    <p>Professional Starlink setup — mounted right, sealed against the weather, and online in every room. Especially for rural and underserved homes that cable and fiber don't reach.</p>
+  </div>
+
+  <div class="body">
+    <div>
+      <div class="sec-t">What's included</div>
+      <ul>
+        <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Site &amp; sky-view survey</b> — the spot with the clearest, most unobstructed view of the sky.</div></li>
+        <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Professional dish mounting</b> — roof, eave, pole, or ground, aimed for peak performance.</div></li>
+        <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Clean cable routing</b> — tidy run into the home, kept out of sight where possible.</div></li>
+        <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Weather-sealing</b> — every penetration and entry point sealed. No leaks.</div></li>
+        <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Router &amp; Wi-Fi setup</b> — network named, secured, and all your devices connected.</div></li>
+        <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Speed &amp; connection test</b> — real speeds verified and stable before we leave.</div></li>
+        <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Walkthrough</b> — how to check status in the Starlink app and when to call us.</div></li>
+      </ul>
+      <div class="provide">
+        <div class="sec-t" style="font-size:18px">What you provide</div>
+        <ul>
+          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Your Starlink kit</b> — bought from Starlink (dish, router &amp; cable come in the box).</div></li>
+          <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Power</b> — a standard outlet near where the router will live.</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-t">Popular add-ons</div>
+      <ul class="addon">
+        <li><span class="dot"></span><div>Pole / mast mount for a higher, clearer view</div></li>
+        <li><span class="dot"></span><div>Extended cable runs</div></li>
+        <li><span class="dot"></span><div>Wi-Fi mesh nodes — signal in every room</div></li>
+        <li><span class="dot"></span><div>Cable concealment / conduit</div></li>
+        <li><span class="dot"></span><div>Grounding for lightning-prone areas</div></li>
+        <li><span class="dot"></span><div>Steep, high, or metal-roof mounting</div></li>
+      </ul>
+
+      <div class="pricebox">
+        <div class="ph">Pricing <span>Starlink kit not included</span></div>
+        <div class="prow big"><span class="lbl">Standard installation</span><span class="val">$[299]</span></div>
+        <div class="prow"><span class="lbl">Pole / mast mount</span><span class="val">$[75–150]</span></div>
+        <div class="prow"><span class="lbl">Mesh node (installed)</span><span class="val">$[50–100]</span></div>
+        <div class="prow"><span class="lbl">Extended cable (per 25 ft)</span><span class="val">$[40–75]</span></div>
+        <div class="prow"><span class="lbl">Grounding kit &amp; install</span><span class="val">$[75–150]</span></div>
+        <div class="prow"><span class="lbl">Remote-area travel</span><span class="val">by quote</span></div>
+        <div class="finenote">Suggested pricing — set your final numbers. Customer purchases the Starlink kit from Starlink.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="warr">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div><b>[90-day] workmanship warranty</b> on every install — if anything about our work needs attention, we make it right. <span style="color:var(--muted)">(Covers our workmanship, not Starlink hardware or service.)</span></div>
+  </div>
+
+  <div class="foot">
+    <div>
+      <div class="cta">Ready to get connected?</div>
+      <div class="pill">Request a free quote</div>
+    </div>
+    <div class="contact">
+      <b>Gordon Protection</b><br>
+      [phone]<br>
+      [email]<br>
+      [website]
+    </div>
+  </div>
+
+</body>
+</html>
