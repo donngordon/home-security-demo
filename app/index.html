@@ -1,0 +1,2109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1322">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Gordon Home Security</title>
+<link rel="manifest" href="security.webmanifest">
+<link rel="apple-touch-icon" href="security-icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="security-icon-192.png">
+<meta name="application-name" content="Gordon Home Security">
+<meta name="apple-mobile-web-app-title" content="Gordon Security">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #0d1322;      /* page */
+    --dusk: #161e33;       /* solid raised surface */
+    --edge: #273150;       /* rings, dividers */
+    --paper: #f4f1ea;      /* text, warm white */
+    --haze: #98a1ba;       /* secondary text */
+    --porch: #d9b77e;      /* champagne brass: interactive, warnings */
+    --porch-hi: #f3dfb6;
+    --sage: #8fd6b4;       /* safe */
+    --flare: #ff6b5e;      /* alarm */
+    --state: var(--haze);  /* set per alarm state */
+    --glass: linear-gradient(180deg, rgba(255,255,255,.065), rgba(255,255,255,.02));
+    --hair: rgba(255,255,255,.085);
+    --lift: inset 0 1px 0 rgba(255,255,255,.07), 0 24px 48px -24px rgba(0,0,0,.7);
+    --display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    --ui: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  button, .dial, .hold, .light, .srow, .wrow { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  html { background: var(--night); }
+  body {
+    margin: 0; color: var(--paper); font: 16px/1.5 var(--ui);
+    background:
+      radial-gradient(110% 55% at 50% -8%, color-mix(in srgb, var(--state) 26%, transparent), transparent 70%),
+      radial-gradient(80% 40% at 100% 100%, rgba(217,183,126,.07), transparent 70%),
+      linear-gradient(180deg, #111a2e, var(--night) 60%);
+    background-attachment: fixed;
+    min-height: 100vh; transition: background .6s;
+    padding: calc(env(safe-area-inset-top) + 8px) 20px calc(env(safe-area-inset-bottom) + 32px);
+  }
+  body[data-state="disarmed"] { --state: var(--haze); }
+  body[data-state^="armed"] { --state: var(--sage); }
+  body[data-state="arming"], body[data-state="pending"] { --state: var(--porch); }
+  body[data-state="triggered"] { --state: var(--flare); }
+  main { max-width: 460px; margin: 0 auto; position: relative; z-index: 1; }
+  #sky { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
+  h1, h2, .display { font-family: var(--display); font-weight: 400; letter-spacing: -0.005em; margin: 0; }
+  p { margin: 0; }
+  .muted { color: var(--haze); }
+  .hidden { display: none !important; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--porch); outline-offset: 3px; }
+  button:disabled { cursor: default; opacity: .4; }
+
+  /* ---------------- top bar ---------------- */
+  .top { display: flex; justify-content: space-between; align-items: center; padding: 10px 0 4px; }
+  .top .hello { font-size: 15px; color: var(--haze); }
+  .top .hello b { color: var(--paper); font-weight: 600; }
+  .ghost { padding: 8px 12px; border-radius: 99px; color: var(--haze); font-size: 14px; }
+  .ghost:hover { color: var(--paper); background: rgba(255,255,255,.06); }
+
+  /* ---------------- the house ---------------- */
+  .hero { text-align: center; padding: 8px 0 4px; }
+  #house { width: 100%; max-width: 360px; display: block; margin: 0 auto; overflow: visible;
+    filter: drop-shadow(0 0 18px color-mix(in srgb, var(--state) 35%, transparent)); transition: filter .6s; }
+  #house .shell { fill: color-mix(in srgb, var(--state) 8%, #141c31); stroke: var(--state); stroke-width: 1.6;
+    stroke-linejoin: round; transition: fill .6s, stroke .6s; }
+  #house .wall { stroke: rgba(255,255,255,.09); stroke-width: 1.2; }
+  #house .room { fill: var(--haze); font: 500 9px var(--ui); letter-spacing: .02em; opacity: .75; }
+  #house .glow { fill: var(--state); opacity: .0; transition: opacity .6s; }
+  body[data-state^="armed"] #house .glow, body[data-state="triggered"] #house .glow,
+  body[data-state="pending"] #house .glow { opacity: .18; }
+  body[data-state="triggered"] #house .shell { animation: alarm 1.1s ease-in-out infinite; }
+
+  /* ---------------- weather readout behind the house ---------------- */
+  .hero { position: relative; }
+  .skytemp { position: absolute; top: 0; left: 0; right: 0; z-index: 0; text-align: center; pointer-events: none; }
+  .skytemp .wxtemp { font-family: var(--display); font-weight: 400; font-size: 90px; line-height: .8; color: var(--paper);
+            letter-spacing: -.02em; text-shadow: 0 6px 44px rgba(0,0,0,.55), 0 1px 3px rgba(0,0,0,.4); opacity: .97; }
+  .skytemp .wxcond { font-size: 15px; font-weight: 600; color: var(--paper); text-transform: capitalize; letter-spacing: .02em;
+            margin-top: 4px; text-shadow: 0 1px 14px rgba(0,0,0,.65); }
+  .skytemp .wxhilo { font-size: 12.5px; color: var(--haze); letter-spacing: .06em; margin-top: 1px;
+            text-shadow: 0 1px 10px rgba(0,0,0,.6); }
+  #house { position: relative; z-index: 1; margin-top: 18px; }
+  .hero .speak { position: absolute; top: 0; right: 2px; z-index: 3; }
+  .today { margin: 2px 0 6px; padding: 2px 18px 8px; border-radius: 24px;
+           background: var(--glass); border: 1px solid var(--hair); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .today .tips li:first-child { border-top: none; }
+  @keyframes yglow { 0%, 100% { opacity: .55 } 50% { opacity: 1 } }
+  @keyframes wglow { 0%, 100% { opacity: .9 } 50% { opacity: 1 } }
+  #house .yl { animation: yglow 3.4s ease-in-out infinite; }
+  #house .winw { animation: wglow 7s ease-in-out infinite; }
+  #house .wxday, #house .wxrain, #house .wxsnow { opacity: 0; transition: opacity .9s ease; }
+  body[data-sky="sun"] #house .wxday, body[data-sky="partly"] #house .wxday { opacity: 1; }
+  body[data-sky="rain"] #house .wxrain, body[data-sky="storm"] #house .wxrain { opacity: 1; }
+  body[data-sky="snow"] #house .wxsnow { opacity: 1; }
+  @keyframes alarm { 50% { fill: color-mix(in srgb, var(--flare) 38%, var(--dusk)); } }
+  .marker circle.core { fill: var(--sage); stroke: color-mix(in srgb, var(--sage) 35%, var(--night)); stroke-width: 5; transition: all .3s; }
+  .marker circle.ring { fill: none; stroke: var(--flare); stroke-width: 2; opacity: 0; }
+  .marker text { fill: var(--paper); font: 600 9px var(--ui); }
+  .marker.open circle.core { fill: var(--flare); stroke: var(--flare); }
+  .marker.open circle.ring { animation: ripple 1.4s ease-out infinite; }
+  .marker.gone circle.core { fill: var(--haze); stroke: var(--edge); }
+  @keyframes ripple { from { r: 8; opacity: .9; } to { r: 22; opacity: 0; } }
+
+  .state-word { font-size: clamp(38px, 11vw, 48px); line-height: 1.02; margin-top: 16px; text-wrap: balance; }
+  .state-sub { color: var(--haze); margin-top: 6px; }
+
+  /* ---------------- mode switch ---------------- */
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 5px; margin: 24px 0 0;
+    background: var(--glass); border: 1px solid var(--hair); border-radius: 20px; box-shadow: var(--lift); backdrop-filter: blur(12px); }
+  .modes button { padding: 14px 6px; border-radius: 13px; font-weight: 600; color: var(--haze); transition: background .25s, color .25s; }
+  .modes button small { display: block; font-weight: 400; font-size: 12px; opacity: .8; }
+  .modes button[aria-pressed="true"]:disabled { opacity: 1; }
+  .modes button[aria-pressed="true"] { background: linear-gradient(180deg, var(--porch-hi), var(--porch)); color: #1d160a;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 6px 18px -6px rgba(217,183,126,.55); }
+  .modes button:not([aria-pressed="true"]):not(:disabled):hover { color: var(--paper); }
+
+  section.block { margin-top: 34px; }
+  section.block > h2 { font-size: 28px; margin-bottom: 14px; }
+
+  /* ---------------- the door ---------------- */
+  .door { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; }
+  .dial { --p: 0; --c: var(--porch); width: 132px; height: 132px; border-radius: 50%; position: relative; display: grid; place-items: center;
+    background: conic-gradient(var(--c) calc(var(--p) * 1turn), var(--edge) 0); transition: transform .15s; touch-action: none; user-select: none; }
+  .dial { box-shadow: 0 0 44px -10px color-mix(in srgb, var(--ring, var(--sage)) 70%, transparent), 0 18px 30px -16px #000; }
+  .dial::before { content: ""; position: absolute; inset: 6px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 30%, #222b45, #121a2d 70%);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.55), inset 0 -1px 0 rgba(255,255,255,.05); }
+  .dial:active:not(:disabled) { transform: scale(.97); }
+  .dial svg { position: relative; width: 44px; height: 44px; }
+  .dial.locked { --ring: var(--sage); background: conic-gradient(from -90deg, var(--porch-hi), var(--porch) calc(var(--p) * 1turn), #6fbf99 0, #b9ecd2 50%, #6fbf99); }
+  .dial:not(.locked) { --ring: var(--porch); background: conic-gradient(from -90deg, #b8955b, var(--porch-hi), #b8955b); }
+  .dial:disabled { background: var(--edge); }
+  .door .what { font-family: var(--display); font-size: 34px; line-height: 1.1; }
+  .door .how { color: var(--haze); font-size: 15px; margin-top: 2px; }
+  .door .when { color: var(--haze); font-size: 13px; margin-top: 10px; opacity: .8; }
+
+  .doors { display: grid; gap: 22px; }
+  .door.compact { gap: 18px; }
+  .door.compact .dial { width: 104px; height: 104px; }
+  .door.compact .dial svg { width: 36px; height: 36px; }
+  .door.compact .what { font-size: 29px; }
+  .door .name { font-weight: 600; font-size: 15px; color: var(--paper); margin-bottom: 2px; }
+
+  /* ---------------- fire / CO banner ---------------- */
+  body[data-fire] { --state: var(--flare); }
+  body[data-fire] #house .shell { animation: alarm 1.1s ease-in-out infinite; }
+  .fire { display: none; margin: 12px 0; padding: 18px; border-radius: 22px; text-align: center;
+    background: linear-gradient(180deg, #5a1a22, #36101a); border: 1px solid rgba(255,107,94,.45); box-shadow: 0 0 40px -8px rgba(255,90,78,.6); }
+  body[data-fire] .fire { display: block; animation: pulse-red 1.2s ease-in-out infinite; }
+  @keyframes pulse-red { 50% { box-shadow: 0 0 60px -4px rgba(255,90,78,.85); } }
+  .fire h2 { font-size: 34px; }
+  .fire p { color: #f6cfcf; margin-top: 6px; }
+  .fire .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .fire .row2 button { padding: 13px; border-radius: 14px; font-weight: 700; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); }
+
+  .leak { display: none; margin: 12px 0; padding: 18px; border-radius: 22px; text-align: center;
+    background: linear-gradient(180deg, #123552, #0c2238); border: 1px solid rgba(140,200,255,.4); box-shadow: 0 0 36px -8px rgba(110,180,255,.55); }
+  body[data-leak] .leak { display: block; }
+  .leak h2 { font-size: 32px; }
+  .leak p { color: #cfe4f6; margin-top: 6px; }
+
+  /* ---------------- daily briefing ---------------- */
+  .brief { margin: 10px 0 4px; padding: 20px 18px 8px; border-radius: 24px; background: var(--glass);
+    border: 1px solid var(--hair); box-shadow: var(--lift); }
+  .brief-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .brief h2 { font-size: 34px; line-height: 1.05; }
+  .brief .wx { color: var(--haze); margin-top: 6px; font-size: 15px; }
+  .brief .wx b { color: var(--paper); font-weight: 600; }
+  .speak { flex: none; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; color: #1d160a;
+    background: linear-gradient(180deg, var(--porch-hi), var(--porch)); box-shadow: 0 10px 24px -10px rgba(217,183,126,.7); }
+  .speak svg { width: 22px; height: 22px; }
+  .speak.talking { animation: porch 1.2s ease-in-out infinite; }
+  .tips { list-style: none; margin: 16px 0 0; padding: 0; }
+  .tips li { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; padding: 13px 0; border-top: 1px solid var(--hair); }
+  .tips .ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.05); color: var(--haze); }
+  .tips .ic svg { width: 18px; height: 18px; }
+  .tips li.good .ic { color: var(--sage); background: color-mix(in srgb, var(--sage) 14%, transparent); }
+  .tips li.warn .ic { color: var(--porch); background: color-mix(in srgb, var(--porch) 16%, transparent); }
+  .tips li.bad .ic { color: var(--flare); background: color-mix(in srgb, var(--flare) 16%, transparent); }
+  .tips .tx { font-size: 15px; line-height: 1.4; }
+  .tips .tx small { display: block; color: var(--haze); font-size: 13px; margin-top: 2px; }
+  .tips .act { padding: 8px 12px; border-radius: 12px; font-size: 13.5px; font-weight: 700; color: #1d160a;
+    background: linear-gradient(180deg, var(--porch-hi), var(--porch)); white-space: nowrap; }
+  .brief .auto { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0 10px;
+    border-top: 1px solid var(--hair); color: var(--haze); font-size: 14px; }
+  .brief .auto .switch { transform: scale(.85); transform-origin: right center; }
+
+  /* ---------------- settings ---------------- */
+  .gear { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: var(--porch-hi);
+    background: var(--glass); border: 1px solid rgba(217,183,126,.35); box-shadow: 0 8px 22px -12px rgba(217,183,126,.7); }
+  .gear svg { width: 20px; height: 20px; }
+  .settings { position: fixed; inset: 0; z-index: 20; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    background: radial-gradient(90% 45% at 50% -5%, rgba(217,183,126,.16), transparent 70%), linear-gradient(180deg, #121a2e, #0a0f1c 70%);
+    transform: translateX(100%); transition: transform .42s cubic-bezier(.2,.8,.2,1); visibility: hidden;
+    padding: calc(env(safe-area-inset-top) + 6px) 20px calc(env(safe-area-inset-bottom) + 40px); }
+  .settings.open { transform: none; visibility: visible; }
+  .settings .inner { max-width: 460px; margin: 0 auto; }
+  .set-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between;
+    margin: 0 -20px; padding: 12px 20px; backdrop-filter: blur(14px); background: rgba(13,19,34,.6); }
+  .set-head h1 { font-size: 30px; }
+  .done { padding: 9px 16px; border-radius: 99px; font-weight: 700; font-size: 14px; color: #1d160a;
+    background: linear-gradient(180deg, var(--porch-hi), var(--porch)); }
+  .profile { position: relative; overflow: hidden; margin: 14px 0 6px; padding: 24px 20px; border-radius: 26px; text-align: center;
+    background: linear-gradient(160deg, rgba(243,223,182,.14), rgba(255,255,255,.03) 45%, rgba(217,183,126,.08));
+    border: 1px solid rgba(217,183,126,.32); box-shadow: var(--lift); }
+  .profile::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, rgba(217,183,126,.05) 0 1px, transparent 1px 14px); pointer-events: none; }
+  .mono { width: 86px; height: 86px; margin: 0 auto 12px; border-radius: 50%; display: grid; place-items: center; position: relative;
+    font: 400 36px var(--display); color: var(--porch-hi); background: radial-gradient(circle at 50% 35%, #222b45, #10172a);
+    box-shadow: 0 0 0 2px #0f1628, 0 0 0 4px rgba(217,183,126,.85), 0 16px 34px -14px rgba(217,183,126,.8); }
+  .profile h2 { font-size: 30px; position: relative; }
+  .role { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 5px 12px; border-radius: 99px; font-size: 12.5px;
+    font-weight: 700; letter-spacing: .04em; color: #1d160a; background: linear-gradient(180deg, var(--porch-hi), var(--porch)); position: relative; }
+  .role.member { color: var(--paper); background: rgba(255,255,255,.08); border: 1px solid var(--hair); }
+  .set-group { margin-top: 26px; }
+  .set-group > h3 { font: 400 22px var(--display); margin: 0 4px 10px; color: var(--paper); }
+  .set-group > h3 small { font: 500 12px var(--ui); color: var(--porch); margin-left: 8px; vertical-align: middle; }
+  .card { border-radius: 22px; background: var(--glass); border: 1px solid var(--hair); box-shadow: var(--lift); overflow: hidden; }
+  .srow { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; text-align: left; border-top: 1px solid var(--hair); }
+  .srow:first-child { border-top: 0; }
+  button.srow:active { background: rgba(255,255,255,.04); }
+  .sico { flex: none; width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; color: var(--porch-hi);
+    background: linear-gradient(160deg, rgba(243,223,182,.2), rgba(217,183,126,.06)); border: 1px solid rgba(217,183,126,.25); }
+  .sico svg { width: 18px; height: 18px; }
+  .stxt { flex: 1; min-width: 0; }
+  .stxt b { display: block; font-weight: 600; font-size: 15.5px; }
+  .stxt span { display: block; color: var(--haze); font-size: 13px; margin-top: 1px; }
+  .sval { color: var(--haze); font-size: 14px; text-align: right; }
+  .chev { color: var(--haze); opacity: .6; font-size: 20px; }
+  .avatar { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font: 400 17px var(--display);
+    color: var(--porch-hi); background: #182038; box-shadow: 0 0 0 1.5px rgba(217,183,126,.55); }
+  .pill { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; }
+  .pill.home { color: #0f2a1e; background: var(--sage); }
+  .pill.away { color: var(--haze); background: rgba(255,255,255,.07); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: 1px; }
+  .dot.ok { background: var(--sage); box-shadow: 0 0 10px var(--sage); } .dot.bad { background: var(--flare); } .dot.off { background: var(--haze); }
+  .signout { display: block; width: 100%; margin-top: 28px; padding: 16px; border-radius: 18px; font-weight: 700; color: #ffb3ab;
+    background: rgba(255,107,94,.08); border: 1px solid rgba(255,107,94,.28); }
+  .fine { text-align: center; color: var(--haze); font-size: 12.5px; margin-top: 18px; line-height: 1.6; }
+  /* walk test */
+  .walk { position: fixed; inset: 0; z-index: 30; display: none; place-items: center; background: rgba(6,9,18,.8); backdrop-filter: blur(8px); padding: 20px; }
+  .walk.open { display: grid; }
+  .walk .sheet { width: min(94vw, 420px); max-height: 86vh; overflow-y: auto; }
+  .walk .prog { height: 6px; border-radius: 99px; background: var(--edge); margin: 14px 0 6px; overflow: hidden; }
+  .walk .prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--porch), var(--porch-hi)); transition: width .4s; }
+  .wrow { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-top: 1px solid var(--hair); }
+  .wrow .ck { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--edge); color: transparent; font-weight: 800; }
+  .wrow.passed .ck { background: linear-gradient(180deg, var(--porch-hi), var(--porch)); border-color: transparent; color: #1d160a; }
+  .wrow .nm { flex: 1; } .wrow small { color: var(--haze); }
+  .wrow.passed small { color: var(--porch-hi); }
+
+  /* ---------------- confirm sheet ---------------- */
+  .confirm { position: fixed; inset: 0; z-index: 40; display: none; align-items: flex-end; justify-content: center;
+    background: rgba(6,9,18,.72); backdrop-filter: blur(6px); padding: 16px 16px calc(env(safe-area-inset-bottom) + 16px); }
+  .confirm.open { display: flex; animation: cf-fade .2s ease-out; }
+  @keyframes cf-fade { from { opacity: 0; } }
+  .cf-card { width: min(100%, 420px); text-align: center; padding: 26px 22px 14px; border-radius: 28px;
+    background: linear-gradient(180deg, #1d2642, #121a2e); border: 1px solid rgba(217,183,126,.32);
+    box-shadow: 0 -20px 60px -20px rgba(0,0,0,.8); animation: cf-up .28s cubic-bezier(.2,.8,.2,1); }
+  @keyframes cf-up { from { transform: translateY(40px); } }
+  .cf-ico { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 50%; display: grid; place-items: center; color: #1d160a;
+    background: linear-gradient(180deg, var(--porch-hi), var(--porch)); box-shadow: 0 12px 30px -10px rgba(217,183,126,.8); }
+  .cf-ico svg { width: 30px; height: 30px; }
+  .confirm.danger .cf-ico { background: linear-gradient(180deg, #ff9d93, var(--flare)); color: #2a0b08; box-shadow: 0 12px 30px -10px rgba(255,107,94,.8); }
+  .cf-card h2 { font-size: 30px; }
+  .cf-card p { color: var(--haze); margin: 8px auto 20px; max-width: 32ch; }
+  .cf-yes { display: block; width: 100%; padding: 17px; border-radius: 18px; font-weight: 700; font-size: 17px; color: #1d160a;
+    background: linear-gradient(180deg, var(--porch-hi), var(--porch)); box-shadow: inset 0 1px 0 rgba(255,255,255,.6); }
+  .confirm.danger .cf-yes { color: #fff; background: linear-gradient(180deg, #ff7e72, #e2493d); }
+  .cf-no { display: block; width: 100%; padding: 14px; margin-top: 6px; color: var(--haze); font-weight: 600; }
+
+  /* ---------------- night schedule ---------------- */
+  .sched { border-radius: 22px; background: var(--glass); border: 1px solid var(--hair); box-shadow: var(--lift); padding: 4px 16px; }
+  .sched .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--hair); }
+  .sched .row:last-child { border-bottom: 0; }
+  .sched .row.sub { padding-top: 0; border-bottom: 1px solid var(--hair); }
+  .sched .nm { font-weight: 600; }
+  .sched .hint { color: var(--haze); font-size: 13px; }
+  .sched label { color: var(--haze); font-size: 15px; }
+  .sched input[type="time"] { font: 400 26px var(--display); color: var(--paper); background: rgba(255,255,255,.05);
+    border: 1px solid var(--hair); border-radius: 12px; padding: 6px 12px; color-scheme: dark; }
+  .sched input:disabled { opacity: .4; }
+  .switch { flex: none; width: 54px; height: 32px; border-radius: 99px; position: relative; background: var(--edge); transition: background .25s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--paper); box-shadow: 0 2px 6px rgba(0,0,0,.4); transition: transform .25s; }
+  .switch[aria-checked="true"] { background: linear-gradient(180deg, var(--porch-hi), var(--porch)); }
+  .switch[aria-checked="true"]::after { transform: translateX(22px); }
+
+  /* ---------------- cameras ---------------- */
+  .cams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cams.one { grid-template-columns: 1fr; }
+  .cam { position: relative; aspect-ratio: 16 / 10; border-radius: 18px; overflow: hidden; padding: 0;
+    background: var(--dusk); border: 1px solid var(--hair); box-shadow: var(--lift); }
+  .cam img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cam .lbl { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 12px 9px; text-align: left;
+    background: linear-gradient(transparent, rgba(12, 15, 34, .85)); font-size: 14px; font-weight: 600; }
+  .cam .off { position: absolute; inset: 0; display: grid; place-items: center; color: var(--haze); font-size: 14px; }
+  #camDlg .sheet { width: min(96vw, 720px); padding: 14px; }
+  #camDlg img { width: 100%; border-radius: 16px; display: block; background: var(--night); min-height: 180px; }
+  #camDlg .bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 6px 2px; }
+  #camDlg .live { color: var(--flare); font-size: 13px; font-weight: 600; }
+  #camDlg .live::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--flare); margin-right: 6px; animation: porch 1.2s infinite; }
+
+  /* ---------------- climate ---------------- */
+  .climate { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; }
+  .thermo { --heat: #f0a36b; --cool: #8cc8ff; --arc: var(--haze); position: relative; width: 150px; height: 150px; }
+  .thermo[data-action="heating"] { --arc: var(--heat); }
+  .thermo[data-action="cooling"] { --arc: var(--cool); }
+  .thermo svg { width: 100%; height: 100%; transform: rotate(135deg); overflow: visible; }
+  .thermo .track { fill: none; stroke: var(--edge); stroke-width: 8; stroke-linecap: round; }
+  .thermo .arc { fill: none; stroke: var(--arc); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset .4s, stroke .4s;
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--arc) 70%, transparent)); }
+  .thermo .face { position: absolute; inset: 18px; border-radius: 50%; display: grid; place-content: center; text-align: center;
+    background: radial-gradient(circle at 50% 30%, #222b45, #121a2d 70%); box-shadow: inset 0 2px 6px rgba(0,0,0,.55); }
+  .thermo .now { font-family: var(--display); font-size: 46px; line-height: 1; }
+  .thermo .now sup { font-size: 20px; vertical-align: top; margin-left: 1px; }
+  .thermo .lbl { font-size: 11.5px; color: var(--haze); margin-top: 4px; }
+  .setpoint { display: flex; align-items: center; gap: 14px; }
+  .setpoint button { width: 48px; height: 48px; border-radius: 50%; background: var(--glass); border: 1px solid var(--hair);
+    box-shadow: var(--lift); font-size: 24px; line-height: 1; color: var(--paper); }
+  .setpoint .target { font-family: var(--display); font-size: 34px; min-width: 2.6ch; text-align: center; }
+  .climate .how { color: var(--haze); font-size: 15px; margin: 2px 0 12px; }
+  .hvac-modes { display: flex; gap: 6px; margin-top: 18px; grid-column: 1 / -1; }
+  .hvac-modes button { flex: 1; padding: 10px 4px; border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--haze);
+    background: var(--glass); border: 1px solid var(--hair); }
+  .hvac-modes button[aria-pressed="true"] { color: #1d160a; background: linear-gradient(180deg, var(--porch-hi), var(--porch)); border-color: transparent; }
+
+  /* ---------------- lights ---------------- */
+  .lights-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .lights-head h2 { font-size: 28px; }
+  .lights { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .light { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 18px; text-align: left;
+    background: var(--glass); border: 1px solid var(--hair); box-shadow: var(--lift); transition: background .3s, border-color .3s; }
+  .light .bulb { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(255,255,255,.05); color: var(--haze); transition: all .3s; }
+  .light .bulb svg { width: 20px; height: 20px; }
+  .light .nm { display: block; font-weight: 600; font-size: 15px; line-height: 1.25; }
+  .light .st { display: block; color: var(--haze); font-size: 13px; }
+  .light.on { background: linear-gradient(180deg, rgba(243,223,182,.16), rgba(217,183,126,.06)); border-color: rgba(217,183,126,.35); }
+  .light.on .bulb { background: linear-gradient(180deg, var(--porch-hi), var(--porch)); color: #1d160a;
+    box-shadow: 0 0 22px -2px rgba(243,223,182,.7); }
+  .light.gone { opacity: .5; }
+  .lights-group { color: var(--haze); font-size: 14px; font-weight: 600; margin: 18px 0 10px; }
+  .lights-group:first-child { margin-top: 0; }
+
+  /* ---------------- help ---------------- */
+  .help { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .hold { --p: 0; position: relative; overflow: hidden; padding: 20px 6px 16px; border-radius: 20px;
+    background: var(--glass); border: 1px solid var(--hair); box-shadow: var(--lift); font-weight: 600; font-size: 15px;
+    touch-action: none; user-select: none; }
+  .hold::after { content: ""; position: absolute; left: 0; bottom: 0; height: 100%; width: calc(var(--p) * 100%);
+    background: color-mix(in srgb, var(--flare) 45%, transparent); pointer-events: none; }
+  .hold .ico { display: grid; place-items: center; width: 46px; height: 46px; margin: 0 auto 10px; border-radius: 50%;
+    background: color-mix(in srgb, var(--flare) 14%, transparent); color: #ff9a90; }
+  .hold .ico svg { width: 22px; height: 22px; }
+  .hold > * { position: relative; z-index: 1; }
+  .note { color: var(--haze); font-size: 14px; margin-top: 12px; max-width: 60ch; }
+
+  /* ---------------- sensors ---------------- */
+  .sensors { list-style: none; margin: 0; padding: 0; }
+  .sensors li { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--hair); }
+  .sensors li:last-child { border-bottom: 0; }
+  .sensors .pip { width: 8px; height: 8px; border-radius: 50%; background: var(--sage); flex: none; box-shadow: 0 0 10px var(--sage); }
+  .sensors li.open .pip { background: var(--flare); box-shadow: 0 0 0 5px color-mix(in srgb, var(--flare) 25%, transparent); }
+  .sensors li.gone .pip { background: var(--haze); }
+  .sensors .nm { flex: 1; }
+  .sensors .st { color: var(--haze); font-size: 14px; }
+  .sensors li.open .st { color: var(--flare); font-weight: 600; }
+  #conn { text-align: center; color: var(--porch); font-size: 14px; margin-top: 20px; }
+
+  /* ---------------- login ---------------- */
+  #login { min-height: 88vh; display: flex; flex-direction: column; justify-content: center; text-align: center; }
+  #login svg { width: 190px; margin: 0 auto 26px; overflow: visible; }
+  #login h1 { font-size: 58px; line-height: .95; }
+  #login .brand-top { display: block; font: 600 14px var(--ui); letter-spacing: .32em; text-transform: uppercase; color: var(--porch);
+    margin-bottom: 10px; }
+  #login p { color: var(--haze); margin: 12px auto 30px; max-width: 30ch; }
+  .brandlogo { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-bottom: 4px; }
+  .brandlogo .gmark { width: 96px; height: 96px; filter: drop-shadow(0 0 16px rgba(240,200,120,.4)); }
+  .brandlogo .gname { font-family: var(--display); font-weight: 700; font-size: 50px; line-height: 1; letter-spacing: .5px;
+    background: linear-gradient(180deg, #f8e7bd, #e7c074 45%, #c99a44); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .brandlogo .gsub { font-family: var(--ui); font-weight: 600; font-size: 15px; letter-spacing: 7px; color: #caa968; padding-left: 7px; margin-top: 3px; }
+  .cta { display: block; width: 100%; padding: 18px; border-radius: 18px; color: #1d160a; font-weight: 700; font-size: 17px;
+    background: linear-gradient(180deg, var(--porch-hi), var(--porch)); letter-spacing: .01em;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 14px 30px -12px rgba(217,183,126,.6); }
+  .cta:hover { filter: brightness(1.06); }
+  #loginMsg { color: var(--porch); margin-top: 16px; min-height: 1.5em; }
+  #loginForm { display: flex; flex-direction: column; gap: 10px; max-width: 320px; margin: 18px auto 0; }
+  #login input { width: 100%; padding: 14px 16px; border-radius: 14px; font: 16px var(--ui); color: var(--paper);
+    background: rgba(255,255,255,.05); border: 1px solid var(--hair); }
+  #login input::placeholder { color: var(--haze); }
+  #login input:focus { outline: none; border-color: var(--porch); background: rgba(255,255,255,.08); }
+  #loginForm .cta { margin-top: 4px; }
+  .demoaccts { margin: 16px auto 0; max-width: 320px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    justify-content: center; font-size: 12.5px; color: var(--haze); }
+  .demoaccts .acct { padding: 6px 13px; border-radius: 99px; background: rgba(255,255,255,.05); border: 1px solid var(--hair);
+    color: var(--paper); font-size: 12.5px; font-weight: 600; }
+  .demoaccts .acct:hover { background: rgba(255,255,255,.1); }
+  .porch-light { animation: porch 3.5s ease-in-out infinite; }
+  @keyframes porch { 50% { opacity: .55; } }
+
+  /* ---------------- sheets (keypad, alarm) ---------------- */
+  dialog { border: 0; padding: 0; background: transparent; color: var(--paper); max-width: 100vw; max-height: 100vh; }
+  dialog::backdrop { background: rgba(10, 12, 28, .72); backdrop-filter: blur(6px); }
+  .sheet { width: min(94vw, 380px); background: linear-gradient(180deg, #1c2540, #131a2e); border: 1px solid var(--hair);
+    border-radius: 28px; padding: 26px; box-shadow: var(--lift), 0 40px 80px -30px #000; }
+  .sheet h2 { font-size: 30px; text-align: center; }
+  .dots { display: flex; justify-content: center; gap: 12px; height: 18px; margin: 18px 0 20px; }
+  .dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--haze); }
+  .dots i.on { background: var(--paper); border-color: var(--paper); }
+  .dots.shake { animation: shake .35s; }
+  @keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+  .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .keys button { height: 64px; border-radius: 50px; background: rgba(255,255,255,.05); border: 1px solid var(--hair); font: 400 28px var(--display); }
+  .keys button:active { background: var(--edge); }
+  .keys .soft { background: none; border: 0; font: 600 15px var(--ui); color: var(--haze); }
+  .sheet .cancel { display: block; margin: 14px auto 0; color: var(--haze); padding: 8px 14px; }
+
+  #alarmDlg .sheet { width: min(96vw, 400px); text-align: center; background: linear-gradient(180deg, #45182a, #2a0f1c); border-color: rgba(255,107,94,.25); }
+  #alarmDlg .sheet p { color: #f2c6c6; margin: 8px 0 24px; }
+  #alarmDlg .dial { margin: 0 auto; width: 150px; height: 150px; }
+  #alarmDlg .dial::before { background: radial-gradient(circle at 50% 30%, #4c1d2f, #2a0f1c 70%); }
+  #alarmDlg .hint { color: #f2c6c6; font-size: 14px; margin-top: 14px; }
+
+  #toast { z-index: 5; position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 22px); transform: translate(-50%, 20px);
+    background: rgba(244,241,234,.96); color: var(--night); box-shadow: 0 16px 40px -12px #000; font-weight: 600; padding: 12px 20px; border-radius: 99px;
+    opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; max-width: 90vw; text-align: center; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  .demo { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin: 8px 0 6px;
+    padding: 12px 12px 12px 16px; border-radius: 18px; background: var(--glass); border: 1px solid rgba(217,183,126,.28); font-size: 13.5px; color: var(--haze); }
+  .demo b { color: var(--paper); font-weight: 600; }
+  .wxdemo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 6px; font-size: 13px; color: var(--haze); }
+  .wxdemo button { padding: 7px 11px; border-radius: 99px; background: var(--glass); border: 1px solid var(--hair); font-size: 13px; font-weight: 600; }
+  .demo button { flex: none; background: linear-gradient(180deg, var(--porch-hi), var(--porch)); color: #1d160a; font-weight: 700; padding: 10px 14px; border-radius: 12px; font-size: 14px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+<script>
+  // Inside the Android app: use the phone's own voice and vibration.
+  if (window.AndroidBridge) {
+    try { Object.defineProperty(navigator, "vibrate", { value: (p) => { AndroidBridge.vibrate(JSON.stringify([].concat(p))); return true; }, configurable: true }); } catch (e) {}
+    window.SpeechSynthesisUtterance = function (t) { this.text = t; };
+    const synth = {
+      get speaking() { return AndroidBridge.isSpeaking(); },
+      cancel() { AndroidBridge.stop(); },
+      getVoices() { return []; },
+      speak(u) {
+        AndroidBridge.speak(u.text); if (u.onstart) u.onstart();
+        setTimeout(() => { const iv = setInterval(() => { if (!AndroidBridge.isSpeaking()) { clearInterval(iv); if (u.onend) u.onend(); } }, 400); }, 1500);
+      },
+    };
+    try { Object.defineProperty(window, "speechSynthesis", { value: synth, configurable: true }); } catch (e) { window.speechSynthesis = synth; }
+  }
+</script>
+</head>
+<body data-state="disarmed">
+<canvas id="sky" aria-hidden="true"></canvas>
+<main>
+  <!-- ======================= LOGIN ======================= -->
+  <section id="login">
+    <div class="brandlogo">
+      <svg class="gmark porch-light" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+        <defs><linearGradient id="gpg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f7e3b4"/><stop offset=".5" stop-color="#e6ba6a"/><stop offset="1" stop-color="#c7983f"/>
+        </linearGradient></defs>
+        <circle cx="50" cy="50" r="47" stroke="url(#gpg)" stroke-width="0.8" opacity=".35"/>
+        <path d="M24 85 V41 L50 16 L76 41 V85 Z" stroke="url(#gpg)" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <text x="50" y="70" text-anchor="middle" font-family="'Instrument Serif', Georgia, serif" font-weight="700" font-size="46" fill="url(#gpg)">G</text>
+      </svg>
+      <div class="gname">Gordon</div>
+      <div class="gsub">PROTECTION</div>
+    </div>
+    <p>Sign in to watch and control your home.</p>
+    <form id="loginForm" autocomplete="off">
+      <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" aria-label="Username" autocapitalize="none" spellcheck="false">
+      <input id="password" name="password" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password">
+      <button class="cta" id="loginBtn" type="submit">Sign in</button>
+    </form>
+    <div id="loginMsg" role="status"></div>
+    <div class="demoaccts"><span>Demo logins — tap to fill:</span>
+      <button type="button" class="acct" data-acct="admin">Admin</button>
+      <button type="button" class="acct" data-acct="member">Family</button>
+      <button type="button" class="acct" data-acct="guest">Guest</button>
+    </div>
+  </section>
+
+  <!-- ======================= APP ======================= -->
+  <section id="app" class="hidden">
+    <div class="top">
+      <div class="hello" id="who"></div>
+      <button class="gear" id="openSettings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+
+    <section class="fire" id="fireBox" role="alert">
+      <h2 id="fireTitle">Smoke detected</h2>
+      <p id="fireText">Get everyone out of the house now. Noonlight has been asked to send the fire department and will call you.</p>
+      <div class="row2">
+        <button id="fireFalse">It's just cooking</button>
+        <button id="fireCall">Call 911</button>
+      </div>
+      <p id="fireNote" style="font-size:13px;margin-top:10px"></p>
+    </section>
+
+    <section class="leak" id="leakBox" role="alert">
+      <h2>Water leak</h2>
+      <p id="leakText"></p>
+    </section>
+
+    <div class="hero">
+      <button class="speak" id="speakBtn" aria-label="Read my briefing out loud">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      </button>
+      <div class="skytemp" aria-live="polite">
+        <div class="wxtemp" id="heroTemp">—°</div>
+        <div class="wxcond" id="heroCond">Checking the sky…</div>
+        <div class="wxhilo" id="heroHiLo"></div>
+      </div>
+      <svg id="house" viewBox="0 0 340 230" role="img" aria-label="Map of your townhouse and its sensors">
+        <defs>
+          <linearGradient id="wallG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#313b50"/><stop offset="1" stop-color="#19212f"/></linearGradient>
+          <linearGradient id="wallG2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b4559"/><stop offset="1" stop-color="#232d40"/></linearGradient>
+          <linearGradient id="woodG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#855d39"/><stop offset="1" stop-color="#4a3420"/></linearGradient>
+          <linearGradient id="glassG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe7b0"/><stop offset=".55" stop-color="#f4bd6b"/><stop offset="1" stop-color="#cf8638"/></linearGradient>
+          <linearGradient id="roofG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#141c2c"/><stop offset="1" stop-color="#0b1018"/></linearGradient>
+          <radialGradient id="warmG" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffd089" stop-opacity=".95"/><stop offset="1" stop-color="#ffd089" stop-opacity="0"/></radialGradient>
+          <filter id="blurS" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.2"/></filter>
+          <filter id="blurL" x="-90%" y="-90%" width="280%" height="280%"><feGaussianBlur stdDeviation="7"/></filter>
+        </defs>
+
+        <ellipse class="glow" cx="175" cy="140" rx="185" ry="112"/>
+
+        <!-- back-yard light spilling up behind the house, and a back lamp -->
+        <ellipse cx="250" cy="58" rx="132" ry="34" fill="url(#warmG)" opacity=".3" filter="url(#blurL)"/>
+        <g class="yl" style="animation-delay:.2s"><rect x="69" y="96" width="2.4" height="54" fill="#28324a"/><circle cx="70" cy="96" r="9" fill="url(#warmG)" filter="url(#blurS)"/><circle cx="70" cy="96" r="2.1" fill="#fff1d2"/></g>
+
+        <!-- ground shadow -->
+        <ellipse cx="176" cy="216" rx="168" ry="12" fill="#05070c" opacity=".45" filter="url(#blurS)"/>
+
+        <!-- garage block -->
+        <rect class="shell" x="12" y="150" width="86" height="64" rx="2" fill="url(#wallG)"/>
+        <rect x="8" y="145" width="94" height="7" rx="2" fill="url(#roofG)"/>
+        <rect x="24" y="166" width="54" height="48" rx="2" fill="url(#wallG2)" stroke="rgba(255,255,255,.06)"/>
+        <g stroke="rgba(255,255,255,.06)" stroke-width="1"><line x1="24" y1="178" x2="78" y2="178"/><line x1="24" y1="190" x2="78" y2="190"/><line x1="24" y1="202" x2="78" y2="202"/></g>
+
+        <!-- main house: lower floor + cantilevered upper floor -->
+        <rect class="shell" x="96" y="120" width="234" height="94" fill="url(#wallG)"/>
+        <rect x="150" y="120" width="40" height="94" fill="url(#woodG)"/>
+        <g stroke="rgba(0,0,0,.22)" stroke-width="1"><line x1="160" y1="120" x2="160" y2="214"/><line x1="170" y1="120" x2="170" y2="214"/><line x1="180" y1="120" x2="180" y2="214"/></g>
+        <rect class="shell" x="112" y="60" width="224" height="62" fill="url(#wallG2)"/>
+        <rect x="92" y="114" width="244" height="8" rx="2" fill="url(#roofG)"/>
+        <rect x="106" y="54" width="232" height="8" rx="2" fill="url(#roofG)"/>
+        <rect x="106" y="54" width="232" height="1.4" fill="rgba(180,200,235,.22)"/>
+
+        <!-- warm window glow haze (behind panes) -->
+        <g filter="url(#blurL)" opacity=".5">
+          <rect x="196" y="150" width="60" height="64" fill="#ffcf85"/>
+          <rect x="276" y="136" width="42" height="42" fill="#ffcf85"/>
+          <rect x="118" y="72" width="170" height="36" fill="#ffcf85"/>
+        </g>
+
+        <!-- warm windows -->
+        <rect class="winw" x="120" y="72" width="30" height="36" rx="1" fill="url(#glassG)"/>
+        <rect x="200" y="72" width="34" height="36" rx="1" fill="url(#glassG)"/>
+        <rect x="250" y="72" width="34" height="36" rx="1" fill="url(#glassG)"/>
+        <rect class="winw" x="196" y="150" width="60" height="64" rx="1" fill="url(#glassG)" style="animation-delay:1.2s"/>
+        <line x1="226" y1="150" x2="226" y2="214" stroke="rgba(0,0,0,.2)" stroke-width="1.4"/>
+        <rect x="276" y="136" width="42" height="42" rx="1" fill="url(#glassG)"/>
+        <line x1="297" y1="136" x2="297" y2="178" stroke="rgba(0,0,0,.2)" stroke-width="1.2"/>
+        <!-- front door + warm sidelight -->
+        <rect x="106" y="170" width="24" height="44" rx="1" fill="url(#woodG)"/>
+        <rect class="winw" x="133" y="172" width="7" height="42" fill="url(#glassG)" style="animation-delay:.7s"/>
+        <circle cx="126" cy="192" r="1.3" fill="#ffe9c2"/>
+        <!-- side door into garage -->
+        <rect x="84" y="176" width="12" height="38" rx="1" fill="url(#wallG2)" stroke="rgba(255,255,255,.06)"/>
+
+        <!-- facade up-lights -->
+        <ellipse cx="130" cy="212" rx="26" ry="10" fill="url(#warmG)" opacity=".32"/>
+        <ellipse cx="300" cy="212" rx="26" ry="10" fill="url(#warmG)" opacity=".28"/>
+
+        <!-- landscaping: shrubs + low hedge -->
+        <ellipse cx="30" cy="206" rx="26" ry="14" fill="#101a2c" opacity=".92"/>
+        <ellipse cx="23" cy="196" rx="15" ry="18" fill="#0e1828" opacity=".92"/>
+        <rect x="96" y="206" width="240" height="10" rx="5" fill="#122034" opacity=".85"/>
+
+        <!-- front walkway + glowing path lights -->
+        <path d="M120 214 L130 214 L152 230 L94 230 Z" fill="#1a2333" opacity=".8"/>
+        <g class="yl"><rect x="99" y="206" width="2" height="9" fill="#28324a"/><circle cx="100" cy="205" r="6" fill="url(#warmG)" filter="url(#blurS)"/><circle cx="100" cy="205" r="1.7" fill="#fff1d2"/></g>
+        <g class="yl" style="animation-delay:.9s"><rect x="151" y="208" width="2" height="9" fill="#28324a"/><circle cx="152" cy="207" r="6" fill="url(#warmG)" filter="url(#blurS)"/><circle cx="152" cy="207" r="1.7" fill="#fff1d2"/></g>
+        <g class="yl" style="animation-delay:1.8s"><rect x="90" y="220" width="2.4" height="10" fill="#28324a"/><circle cx="91" cy="219" r="7" fill="url(#warmG)" filter="url(#blurS)"/><circle cx="91" cy="219" r="2" fill="#fff1d2"/></g>
+        <g class="yl" style="animation-delay:2.6s"><rect x="162" y="222" width="2.4" height="10" fill="#28324a"/><circle cx="163" cy="221" r="7" fill="url(#warmG)" filter="url(#blurS)"/><circle cx="163" cy="221" r="2" fill="#fff1d2"/></g>
+        <!-- modern bollard by the door -->
+        <g class="yl" style="animation-delay:.4s"><rect x="142" y="196" width="3" height="18" rx="1.5" fill="#2a3346"/><circle cx="143.5" cy="196" r="6" fill="url(#warmG)" filter="url(#blurS)"/><circle cx="143.5" cy="196" r="1.8" fill="#fff1d2"/></g>
+
+        <!-- depth: shadowed right-side returns -->
+        <rect x="330" y="120" width="7" height="94" fill="#0f1623"/>
+        <rect x="336" y="60" width="4" height="62" fill="#0e1420"/>
+        <!-- driveway from the garage -->
+        <path d="M40 214 L82 214 L130 230 L2 230 Z" fill="#20283a" opacity=".6"/>
+        <!-- window mullions -->
+        <g stroke="rgba(48,30,14,.45)" stroke-width="1">
+          <line x1="196" y1="166" x2="256" y2="166"/><line x1="196" y1="184" x2="256" y2="184"/>
+          <line x1="276" y1="157" x2="318" y2="157"/>
+          <line x1="200" y1="90" x2="284" y2="90"/>
+        </g>
+        <!-- subtle glass reflection -->
+        <line x1="210" y1="152" x2="202" y2="210" stroke="rgba(255,255,255,.1)" stroke-width="3"/>
+        <!-- living-room interior hint: couch + lamp -->
+        <g opacity=".55"><rect x="204" y="190" width="26" height="16" rx="2" fill="#7a4e26"/><rect x="236" y="178" width="4" height="28" fill="#5e4023"/><circle cx="238" cy="176" r="5" fill="#fff0c2"/></g>
+        <!-- warm light pooling on the ground -->
+        <g filter="url(#blurS)" opacity=".4">
+          <ellipse cx="226" cy="217" rx="32" ry="5" fill="#ffcf85"/>
+          <ellipse cx="297" cy="181" rx="18" ry="4" fill="#ffcf85"/>
+          <ellipse cx="124" cy="216" rx="14" ry="4" fill="#ffcf85"/>
+        </g>
+        <!-- a fuller tree, front-left -->
+        <g>
+          <rect x="33" y="186" width="4.5" height="28" rx="1.5" fill="#221912"/>
+          <ellipse cx="35" cy="176" rx="21" ry="19" fill="#0f1a2a"/>
+          <ellipse cx="24" cy="184" rx="14" ry="14" fill="#0d1726"/>
+          <ellipse cx="47" cy="184" rx="13" ry="13" fill="#0d1726"/>
+          <ellipse cx="35" cy="169" rx="12" ry="12" fill="#101c2e"/>
+        </g>
+        <!-- daytime: windows read as "off", muted and cool -->
+        <g class="wxday">
+          <rect x="120" y="72" width="30" height="36" fill="#223049" opacity=".72"/>
+          <rect x="200" y="72" width="34" height="36" fill="#223049" opacity=".72"/>
+          <rect x="250" y="72" width="34" height="36" fill="#223049" opacity=".72"/>
+          <rect x="196" y="150" width="60" height="64" fill="#223049" opacity=".7"/>
+          <rect x="276" y="136" width="42" height="42" fill="#223049" opacity=".72"/>
+          <rect x="133" y="172" width="7" height="42" fill="#223049" opacity=".7"/>
+        </g>
+        <!-- rain: streaks down the panes + puddles -->
+        <g class="wxrain">
+          <g stroke="rgba(190,214,245,.5)" stroke-width="1">
+            <line x1="206" y1="154" x2="202" y2="210"/><line x1="222" y1="152" x2="218" y2="212"/><line x1="240" y1="156" x2="236" y2="208"/>
+            <line x1="286" y1="140" x2="283" y2="174"/><line x1="304" y1="140" x2="301" y2="176"/>
+            <line x1="128" y1="76" x2="126" y2="104"/><line x1="214" y1="76" x2="212" y2="104"/><line x1="262" y1="76" x2="260" y2="104"/>
+          </g>
+          <g filter="url(#blurS)">
+            <ellipse cx="226" cy="217" rx="40" ry="4.5" fill="#5a7bb0" opacity=".5"/>
+            <ellipse cx="120" cy="218" rx="24" ry="3.5" fill="#5a7bb0" opacity=".45"/>
+            <ellipse cx="300" cy="182" rx="18" ry="3" fill="#5a7bb0" opacity=".4"/>
+          </g>
+        </g>
+        <!-- snow: settled on the roofs, sills and ground -->
+        <g class="wxsnow" fill="#eef3fb">
+          <rect x="104" y="50" width="236" height="5" rx="2.5"/>
+          <rect x="90" y="110" width="247" height="5" rx="2.5"/>
+          <rect x="6" y="141" width="97" height="4" rx="2"/>
+          <rect x="118" y="70" width="34" height="2.5" rx="1.2"/><rect x="198" y="70" width="88" height="2.5" rx="1.2"/>
+          <rect x="194" y="148" width="64" height="2.5" rx="1.2"/><rect x="274" y="134" width="46" height="2.5" rx="1.2"/>
+          <rect x="0" y="212" width="340" height="7" rx="3" opacity=".55"/>
+        </g>
+        <g id="markers"></g>
+      </svg>
+      <h1 class="state-word" id="statusText">Connecting…</h1>
+      <p class="state-sub" id="statusSub"></p>
+
+      <div class="modes" role="group" aria-label="Alarm mode">
+        <button id="modeOff" aria-pressed="true">Off<small>Disarmed</small></button>
+        <button id="modeHome" aria-pressed="false">Home<small>Doors, windows</small></button>
+        <button id="modeAway" aria-pressed="false">Away<small>Everything</small></button>
+      </div>
+    </div>
+
+    <section class="today" id="todayBlock" aria-live="polite">
+      <ul class="tips" id="tips"></ul>
+    </section>
+
+    <div class="demo">
+      <p><b>Demo with sample data.</b> Nothing here controls a real home. Disarm code: 1234.</p>
+      <span style="display:grid;gap:6px"><button id="simBtn">Try a break-in</button><button id="fireBtn">Try a kitchen fire</button><button id="leakBtn">Try a water leak</button></span>
+    </div>
+    <div class="wxdemo" role="group" aria-label="Preview the weather background">
+      <span>Preview weather:</span>
+      <button data-wx="sunny">Sunny</button><button data-wx="partlycloudy">Partly cloudy</button><button data-wx="cloudy">Gloomy</button>
+      <button data-wx="rainy">Rain</button><button data-wx="lightning-rainy">Storm</button><button data-wx="snowy">Snow</button><button data-wx="clear-night">Night</button>
+    </div>
+
+    <section class="block" id="nightBlock">
+      <h2>Night schedule</h2>
+      <div class="sched">
+        <div class="row">
+          <div><div class="nm">Arm automatically</div><div class="hint">Home mode: doors and windows</div></div>
+          <button class="switch" id="nightOn" role="switch" aria-checked="false" aria-label="Arm automatically at night"></button>
+        </div>
+        <div class="row sub"><label for="nightAt">Arm at</label><input type="time" id="nightAt"></div>
+        <div class="row">
+          <div><div class="nm">Turn off in the morning</div><div class="hint">Needs no code</div></div>
+          <button class="switch" id="mornOn" role="switch" aria-checked="false" aria-label="Turn off the alarm in the morning"></button>
+        </div>
+        <div class="row sub"><label for="mornAt">Turn off at</label><input type="time" id="mornAt"></div>
+      </div>
+      <p class="note" id="nightNote"></p>
+    </section>
+
+    <section class="block" id="camBlock">
+      <h2>Cameras</h2>
+      <div class="cams" id="cams"></div>
+    </section>
+
+    <section class="block">
+      <div class="lights-head"><h2>Doors</h2><button class="ghost" id="lockAll">Lock all</button></div>
+      <div class="doors" id="doors"></div>
+    </section>
+
+    <section class="block" id="garageBlock">
+      <h2>Garage</h2>
+      <div class="door">
+        <button class="dial" id="garageDial" aria-describedby="garageHow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 21V9l9-5 9 5v12"/>
+            <g id="slats"><path d="M7 21v-9h10v9"/><path d="M7 15h10"/><path d="M7 18h10"/></g>
+          </svg>
+        </button>
+        <div>
+          <div class="what" id="garageText">…</div>
+          <div class="how" id="garageHow"></div>
+          <div class="when" id="garageSub"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="climateBlock">
+      <h2>Climate</h2>
+      <div class="climate">
+        <div class="thermo" id="thermo">
+          <svg viewBox="0 0 150 150" aria-hidden="true">
+            <circle class="track" cx="75" cy="75" r="68" pathLength="100" stroke-dasharray="75 100"/>
+            <circle class="arc" id="thermoArc" cx="75" cy="75" r="68" pathLength="100" stroke-dasharray="75 100" stroke-dashoffset="75"/>
+          </svg>
+          <div class="face"><div class="now" id="tempNow">–</div><div class="lbl">Inside now</div></div>
+        </div>
+        <div>
+          <div class="how" id="climateHow"></div>
+          <div class="setpoint">
+            <button id="tDown" aria-label="Lower temperature">−</button>
+            <div class="target" id="tTarget" aria-live="polite">–</div>
+            <button id="tUp" aria-label="Raise temperature">+</button>
+          </div>
+        </div>
+        <div class="hvac-modes" id="hvacModes" role="group" aria-label="Heating and cooling mode"></div>
+      </div>
+    </section>
+
+    <section class="block" id="lightsBlock">
+      <div class="lights-head"><h2>Lights</h2><button class="ghost" id="allOff">Turn all off</button></div>
+      <div id="lights"></div>
+    </section>
+
+    <section class="block">
+      <h2>Get help</h2>
+      <div class="help">
+        <button class="hold" data-dispatch="police"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M12 8.5l1.1 2.3 2.4.3-1.8 1.7.5 2.4-2.2-1.2-2.2 1.2.5-2.4-1.8-1.7 2.4-.3z"/></svg></span><span>Police</span></button>
+        <button class="hold" data-dispatch="fire"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M12 21c-3.6 0-6-2.5-6-5.8 0-3.8 3.4-5.6 3.8-9.7 2.8 1.9 4 4.4 3.6 6.6 1-.6 1.8-1.7 2-2.9 1.6 1.6 2.6 3.7 2.6 6 0 3.3-2.4 5.8-6 5.8z"/></svg></span><span>Fire</span></button>
+        <button class="hold" data-dispatch="medical"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M9.5 3.5h5v6h6v5h-6v6h-5v-6h-6v-5h6z"/></svg></span><span>Medical</span></button>
+      </div>
+      <p class="note">Tap a button, then confirm. Noonlight calls you to confirm, then sends help. If a life is in danger, call 911 as well.</p>
+    </section>
+
+    <section class="block">
+      <h2>Sensors</h2>
+      <ul class="sensors" id="sensors"></ul>
+    </section>
+    <p id="conn" role="status"></p>
+  </section>
+</main>
+
+<!-- Code keypad -->
+<dialog id="pinDlg">
+  <div class="sheet">
+    <h2 id="pinTitle">Enter your code</h2>
+    <div class="dots" id="pinDots"></div>
+    <div class="keys" id="keypad"></div>
+    <button class="cancel" id="pinCancel">Cancel</button>
+  </div>
+</dialog>
+
+<!-- Shown right after sign-in when the alarm is going off -->
+<dialog id="alarmDlg">
+  <div class="sheet">
+    <h2>Your alarm is going off</h2>
+    <p>Unlock the front door so police, firefighters or paramedics can get in.</p>
+    <button class="dial locked" id="alarmDial" aria-label="Unlock the front door">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+      </svg>
+    </button>
+    <div class="hint">Tap to unlock</div>
+    <button class="cancel" id="alarmLater" autofocus>Keep it locked</button>
+  </div>
+</dialog>
+
+<!-- Full-screen live camera -->
+<dialog id="camDlg">
+  <div class="sheet">
+    <img id="camLive" alt="">
+    <div class="bar">
+      <div><b id="camName"></b> <span class="live">Live</span></div>
+      <button class="ghost" id="camClose">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ======================= SETTINGS ======================= -->
+<aside class="settings" id="settings" aria-label="Settings" aria-hidden="true">
+  <div class="inner">
+    <div class="set-head"><h1>Settings</h1><button class="done" id="closeSettings">Done</button></div>
+
+    <div class="profile">
+      <div class="mono" id="mono">D</div>
+      <h2 id="pName">Name</h2>
+      <span class="role" id="pRole">Administrator</span>
+    </div>
+
+    <section class="set-group admin-only">
+      <h3>User management <small>Admin</small></h3>
+      <div class="card" id="people"></div>
+      <div class="card" style="margin-top:10px">
+        <button class="srow" id="manageUsers"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.3-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.7 2.5 3 5.2"/></svg></span><span class="stxt"><b>Manage users</b><span>Add family, choose who is an admin, remove access</span></span><span class="chev">›</span></button>
+        <button class="srow" id="manageCodes"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7.5" cy="15.5" r="4"/><path d="m10.5 12.5 9-9M16 6l3 3M14 8l2 2"/></svg></span><span class="stxt"><b>Alarm and door codes</b><span>Change codes on the panel and both door locks</span></span><span class="chev">›</span></button>
+      </div>
+    </section>
+
+    <section class="set-group">
+      <h3>Alerts</h3>
+      <div class="card">
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></span><span class="stxt"><b>Sound</b><span>Chimes, warnings and the alarm tone</span></span><button class="switch" data-pref="sound" role="switch"></button></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M3 9v6M21 9v6"/></svg></span><span class="stxt"><b>Vibration</b><span>Buzz when a door opens (Android)</span></span><button class="switch" data-pref="vibrate" role="switch"></button></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span class="stxt"><b>Talking briefing</b><span>Read the briefing aloud when the app opens</span></span><button class="switch" data-pref="autoSpeak" role="switch"></button></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span><span class="stxt"><b>Door chime when alarm is off</b><span>A soft ding-dong for every door</span></span><button class="switch" data-pref="chimeOff" role="switch"></button></div>
+      </div>
+    </section>
+
+    <section class="set-group">
+      <h3>Security</h3>
+      <div class="card">
+        <button class="srow" id="goNight"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span><span class="stxt"><b>Night schedule</b><span id="nightSummary">Arm the alarm automatically</span></span><span class="chev">›</span></button>
+        <button class="srow" id="startWalk"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 13l2 2 4-4"/></svg></span><span class="stxt"><b>System test</b><span>Walk through the house and check every sensor</span></span><span class="chev">›</span></button>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/></svg></span><span class="stxt"><b>Emergency service</b><span>Noonlight sends police, fire or medical</span></span><span class="sval" id="nlStatus"></span></div>
+      </div>
+    </section>
+
+    <section class="set-group">
+      <h3>Sensors</h3>
+      <div class="card" id="sensorCard"></div>
+    </section>
+
+    <section class="set-group">
+      <h3>Connections</h3>
+      <div class="card" id="connCard"></div>
+    </section>
+
+    <section class="set-group">
+      <h3>About</h3>
+      <div class="card">
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg></span><span class="stxt"><b>Gordon Home Security</b><span>Version 1.3</span></span></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7 15h10" stroke-linecap="round"/></svg></span><span class="stxt"><b>Alarm panel</b><span>Qolsys IQ Panel 2, software 2.8.1</span></span></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="stxt"><b>Front door lock</b><span>Schlage smart lock</span></span></div>
+        <div class="srow"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="stxt"><b>Back door lock</b><span>Kwikset Home Connect, Z-Wave Plus</span></span></div>
+      </div>
+    </section>
+
+    <button class="signout" id="logoutBtn">Sign out</button>
+    <p class="fine">Panel reboot, power down and Wi-Fi settings stay on the panel itself, so nobody can switch off your alarm from a phone.</p>
+  </div>
+</aside>
+
+<div class="walk" id="walk" role="dialog" aria-label="System test">
+  <div class="sheet">
+    <h2>System test</h2>
+    <p class="note" style="text-align:center;margin-top:8px">Open each door and window, wave at the motion detector, and clap near the glass break sensors. Each one ticks off when it reports in.</p>
+    <div class="prog"><i id="walkBar"></i></div>
+    <p class="note" id="walkCount" style="margin:0 0 6px"></p>
+    <div id="walkList"></div>
+    <button class="cancel" id="walkDone">Finish test</button>
+  </div>
+</div>
+
+<div class="confirm" id="confirm" role="dialog" aria-modal="true" aria-labelledby="cfTitle">
+  <div class="cf-card">
+    <div class="cf-ico" id="cfIco"></div>
+    <h2 id="cfTitle"></h2>
+    <p id="cfText"></p>
+    <button class="cf-yes" id="cfYes"></button>
+    <button class="cf-no" id="cfNo">Cancel</button>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+/* =====================================================================
+   CONFIG: change these to match your Home Assistant entity IDs.
+   x / y place each sensor on the house drawing (0–320 wide, 92–214 tall).
+   ===================================================================== */
+const CONFIG = {
+  // Leave null when this page is served by Home Assistant (/local/security.html).
+  hassUrl: null,
+  alarm: "alarm_control_panel.home_security",
+  // Every door with a smart lock. Hold a lock 2 seconds to unlock it, tap to lock it.
+  locks: [
+    { id: "lock.front_door",        label: "Front door",             sensor: "binary_sensor.front_door" },  // Schlage
+    { id: "lock.garage_entry_door", label: "Back door to garage",    sensor: "binary_sensor.garage_door" },  // Kwikset Home Connect 450126VHC
+  ],
+  responderLock: "lock.front_door",  // the door the alarm screen offers to unlock for responders
+  garage: "cover.garage_door",       // set to null if you have no garage opener
+  cameras: [                         // remove lines you don't need, add more as needed
+    { id: "camera.front_porch", label: "Front porch" },
+    { id: "camera.driveway",    label: "Driveway" },
+    { id: "camera.garage",      label: "Garage" },
+    { id: "camera.backyard",    label: "Backyard" },
+  ],
+  cameraRefreshMs: 5000,
+  lights: [                          // remove lines you don't need, add more as needed
+    { id: "light.living_room", label: "Living room" },
+    { id: "light.kitchen",     label: "Kitchen" },
+    { id: "light.shoe_hall",   label: "Shoe hall" },
+    { id: "light.garage",      label: "Garage" },
+    { id: "light.bedroom",     label: "Bedroom" },
+    { id: "light.porch",              label: "Porch",             outside: true },
+    { id: "light.front_yard_garden",  label: "Front yard garden", outside: true },
+    { id: "light.back_yard_garden",   label: "Back yard garden",  outside: true },
+  ],
+  night: {                           // night schedule helpers (created by home_security.yaml)
+    enabled: "input_boolean.security_night_schedule",
+    armAt: "input_datetime.security_night_arm",
+    disarmEnabled: "input_boolean.security_morning_disarm",
+    disarmAt: "input_datetime.security_morning_disarm",
+  },
+  // Smoke and carbon monoxide detectors: always watched, even when the alarm is off.
+  smoke: [
+    { id: "binary_sensor.smoke_detector", label: "Smoke detector", kind: "smoke" },
+    // Add a carbon monoxide detector here when you install one: kind: "co"
+  ],
+  // Water leak sensors from the panel
+  leaks: [
+    { id: "binary_sensor.garage_closet_flood",   label: "Garage closet flood sensor" },
+    { id: "binary_sensor.garage_closet_f_flood", label: "Garage closet flood sensor 2" },
+  ],
+  thermostat: "climate.thermostat",  // set to null if you don't want it
+  weather: "weather.forecast_home",  // Home Assistant's built-in weather (Settings > Devices > Met.no)
+  comfort: { heat: 68, cool: 78 },   // balanced temperatures for winter and summer
+  tempUnit: "°",             // how often the small pictures update
+  sensors: [
+    // Names come from your Qolsys panel (Settings > Advanced > Edit Sensor).
+    // Confirm the exact entity IDs once the panel is connected to Home Assistant.
+    { id: "binary_sensor.front_door",          label: "Front door",             x: 119, y: 214 },
+    { id: "binary_sensor.garage_door",         label: "Back door to garage",     x: 90,  y: 190 },
+    { id: "binary_sensor.patio_door",          label: "Patio door",             x: 220, y: 214 },
+    { id: "binary_sensor.left_bedroom_window", label: "Left bedroom window",    x: 290, y: 154 },
+    { id: "binary_sensor.motion_detector",     label: "Motion detector",        x: 135, y: 150 },
+    { id: "binary_sensor.bedroom_glassbreak",  label: "Bedroom glass break",    x: 312, y: 196, kind: "glass" },
+    { id: "binary_sensor.panel_glass_break",   label: "Panel glass break",      x: 175, y: 128, kind: "glass" },
+    { id: "cover.garage_door",                 label: "Garage overhead door",   x: 50,  y: 214 },
+  ],
+  holdMs: 2000,
+};
+
+
+const ERR_HASS_HOST_REQUIRED=1, ERR_INVALID_AUTH=2;
+const CAMS=["data:image/jpeg;base64,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SsY+by0WcOQemRvXr6/WtDULy0Nhp1idTWWG3LiZrWJohJEzx4UAqMyfKWLMOdq8kgVy9FFgN7X7q3bS9MsoLuK6e1aX95BEYk2Nt25BVSX4bLY5G0ZOK0LzU7S71nxL/p6rZanLceQ7LJtjzNHKHKhcgMIwvAJ45HSuRoosgOlvtTsxcajc2spe4+zQ2FudpGVESxyS+2VQjB5/ee1c1iiimtBBijFFFMAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigAxRiiigB2KMUtFIBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBcUYpcUYqRiYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFADqKMUYpXGFFGKMUXAKKMUYouAUUYoxRcAooxRii4BRRijFFwCijFGKLgFFGKMUXAKKMUYouAUUYoxRcAooxRii4BRRijFFwCijFGKLgFFGKMUXAKKMUYouAUUYoxRcAooxRii4BRRijFFwCijFGKLgFFGKMUXAKKMUYouAUUYoxRcAooxRii4BRRijFFwCijFGKLgFFGKMUXAKKMUYouAUUYoxRcAooxRii4BRRijFFwCijFGKLgFFGKMUXAKKMUYouAUUYoxRcAooxRii4BRRijFFwCijFGKLgFFGKMUXAKKMUYouAUUYoxRcB2KMUuKMUgExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAFop2KMUhjaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFAC0UYoxSAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAKKMUYoAd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PYiew6iiisTEKKKKAEPSqNz1q8elUrnrVx3GirijFLRWpYmKMUtFAy3a1dqna9quVzVNzrpbBRRRUGoUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAGRRS4oxXWeeJRS4oxQAlFLijFACUUuKWgCeGpqhiqauSe5kwoooqBBRRRQAUhpaDQBWm61DU0veosV1w2NFsJRS4oxVlCUUuKMUAJRS4ooAngqxUENT1SLQUUUUDCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigApwYCm1BKxBqZK5MlctbxRvFUN5o3ms+Uy5S/vFG8VQ3mjeaOUOUvFxiqs5yaj3mmk5pqNhpDaKXFGKsoSilxSigC1bVbqpb1brnnudlPYKKKKg0CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAy6KMUYrqOAKKMUYoAKKMUYoAKKMUoHNAE0XSpaijqWuWe5i9woooqBBRRRQAUGig0AV5etR1LJUWK6obGsdgooxRirKCijFGKACijFLigCWGp6gjOKl3iqTKQ6im7xRvFO47jqKbvFG8UXC46im7xRvFFwuOopu8UbxRcLjqKbvFG8UXC46im7xRvFFwuOopu8UbxRcLjqKbvFG8UXC46im7xRvFFwuOopu8UbxRcLjqKbvFG8UXC46q8vWpi4qGQ5pNiZFRRijFSSFFGKMUAFFGKMUAFFGKMUAFFGKXFAFm3q1Va3qzXPPc66ewUUUVJoFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQBm4oxS4oxXScAmKMUuKMUAJijFLijFACYoxS4oxQBJHUtRpUlcs9zGW4UUUVIgooooAKDRQaAIXqPFSPTMV0w2NY7CYoxS4oxVlCYoxS4oxQAmKMUuKMUAFGTRijFABk0ZNGKMUAGTRk0YoxQAZNGTRijFABk0ZNGKMUAGTRk0YoxQAZNGTRijFABk0ZNGKMUAGTRk0YoxQAZNGTRijFABk0ZNGKMUAGTRk0YoxQAZNFGKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQBYt6s1Xg7VYrCe5109goooqTQKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigDPop2KMVucI2inYoxQA2inYoxQA2inYoxQA5aduqMUtZuF2Q4XH7qN1MopezFyD91G6mUUezDkH7qN1Moo9mHIDUynUYrRKyLSsNop2KMUxjaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFAE0NWKghqespbnVT2CiiipNAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAKVFLRWxwiUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFAEsVT1DFU1ZyOqnsFFFFSaBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf/Z","data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAGQAoADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDxSilqS3gkubiKC3jaSaVgiIoyWYnAAHrmu4wIqK2V8N6m9/aWccEUk10WEJjuI3Riv3vnDFRjvk8d6ryaPfRaSdTktytkLk2ZkLDiULuKkZz0PXGKV0BnUVvy+EtYguru3uLeCCW1aJJhNdQxhWlQvGMswBJUE4GenNZuo6bd6a0K30DQtKrMqtjOFdozkdiGRhg+lF0BSorT1jRbzR5XivxbLMkhieOO6ilZGHBDBGJGMd6WLQ9Rl09byK23wNjaFdS5BfYG2Z3bS3y7sYzxnNFwMuitebw9qUN5FavBH5kodlKzxsmEzvy4baNuDnJGO9PTwzqzzzwrar5kJAIMqDeSu4BDn94SvIC5yCCOtF0Oxi0VoaLpF9rd+llpdu1xcv0UEKByBySQByQOT1IHei20i+udLu9Sht2aytcebKSABllXjJyeXXOM43DNFxGfRWlp2jX+o28k1nAHjQ7eZFUs2CdqgkFjgZwuTRJo19Hpgv3gAtiA2fMXcFJwGKZ3BSeAxGD60XAzaK0l0XUG0qPUhaubOSZbeN8jLu27AC9TnYwyBjII60uoaLf2DwrcQqTM7Rx+TKkoLggFMoT8wyMr15HrRcDMorYm8OapFdW9ubZZJZ2dI/KlSQFk5cFlJAKggkEjAOTgVEui351a600wqt3as6zq0iKsZQ4bc5O0AEYznFFwMyitu18M6nc3klpHHbLdI/lmKW7hjYnGeAzDIwc5GR71i0XASilopgJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAJRS0UAOq3pEy2+q2c7zy2yxzI/nRLuePBB3KO5HWqtFAHcT6xpNpA90v8AZ95qvlSxEW0M0MEgkKDdtATawQSg7doO5OuDWkPEehTw+XdTL5Fxdy6lNCIn2pKUtX2Dju0c8YPOM5PHNea0VPKh3O41XxLYz2uoPJHb6jc3B0ttlwsoBaK0dJW+UryHIHJwc8Ajms7xDdwa5p2m3s+q239oRW8ouIXjlDvK1zNLwQhTkSA/eHXtXMUUcoXOp+IF1puoa1fXumS6bIlxdyyg263IkdWYkFxKNoP+7jk+lWdA1Ox0Oy067i1CG4u/tEMt3AVl8wRRzK4hTKbOqhyd3YAdDnjaKLaWC510baOU0zS5tZH2OGa5uZ7pI5VDLIsYEQ+Tdk+VydpA398Vp2/iKxeREv7nT2ht71p3CW8jeZAYokWKBmTcjKItoY7T0OeufPqKOULm34Z1G1tPE+gXU8UVrb2l3BJPLHvYsqyKxZgSecDooH0qHRbyG203XoZpNr3NksUK4J3OLiByPb5UY8+n0rKop2C52Wga1pqJpUs/k2DaVqDX3kRrKwuAVi+VSd2GzDj5iB8/tim6trFheaFIDJbGZrK1tooY4CsySRCNWZ5NuGQhGwu48spwCCa4+ilyhc2tLu7NPD91ZXssimXULSUrGPm8pEnDlT0yPMXr6/WtLUb6ybTtM086ossNsziZrOJohJCzxYUKVGZPlZizDB2rySBXJ0U7Bc6HxHeWz6TpVhb3kN29o037y3haKPY2zbkFVJf5W3NjkbRk4rSvtWsrzXPFI/tFUsdVmuRA7JJtjzPHKshULkBxGF4BPHI4FcZRRYLnU6hq1kLnU7u0mL3H2WDTrY7CCVEKxSS8jjKoRg8/vPauVpaKErAJRS0UxCUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFAC4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAXFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAFxRinYoxSGNxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUALijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFADsUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoAXFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFG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KCgooooAKKKKACiiigBr9Kyrv7xrVfpWXd/eNNGVTYqUU6imc42inUUANop1FACUUtFO4CZozS0UXATNGaWii4CZozS0UXAQZNOCn0qSBNxFaKWwIp3Go3MrafSjafStj7KKPsooHyGPtPpRtPpWx9lFH2UUByGPtPpRtPpWx9lFH2UUByGPtPpRtPpWx9lFH2UUByGPtPpRtPpWx9lFH2UUByGPsNGw+lbH2UUfZRSsPlMfYfSjYfStj7KKPsoosHKY9FLijFIgSilxRigBKKXFGKAEopcUYoASilxRigBKKXFGKAEopcUYoASilxRigBKKXFGKAEopcUYoASilxRigBKKXFGKAEopcUYoASrNr1qvirNr94UFR3NJPuirMFVk+6KswUjefwlwdKWkHSlpnKFFFFABRRRQAUx+lPpj9KBopS9ajqSXrUdSdcdgooooKCiiigAooooAKKKKAGv8AdNZl11rTf7prNuvvGmjKoVaKXFGKZziUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFAE9r94VsRfdFZFt94VrxfdFUjSI+iiimUFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAc/ijFLijFQZCYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYqxbfeFQYqe2+9QVHc0V+7VmCqy9KswUjafwlwdKWkHSlpnKFFFFABRRRQAUx+lPpj9KBopS9ajqSXrUdSdcdgooooKCiiigAooooAKKKKAGt92s65+8a0W6VnXP3qaMqmxXxRilxRimYCYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFAE1t94VrRfdrKtvvCtWP7opouI+iiiqKCiiigAooooAKKKKACiiigAooooAKKKKAMHFGKXFGKgyExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExU9t96ocVPb/AHhQVHcvr0qzBVZelWYKRtP4S4OlLSDpS0zlCiiigAooooAKY/Sn0x+lA0UpetR1JL1qOpOuOwUUUUFBRRRQAUUUUAFFFFADW6Vn3P3q0G6VQuPvGmjKpsV8UYpcUYpmAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQBNbD5hWrH90Vl2/3hWpH92mi4jqKKKooKKKKACiiigAooooAKKKKACiiigAooooAxMUYpcUYqDITFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFTQcGoTQrYNVGPMNOzNNWGKswMM1jiY09bkiq9kzSU01Y3xIuKXzBWH9rPrR9rNP2bMTc8wUeYKw/tZo+1mj2bA3PMFHmCsP7WaPtZo9mwNzzBTXdcdaxftZpDdk96PZsEXpWGaj3CqLXBNN880vZM3VRJGhuFG4Vn+eaPPNHsmP2iNHcKWs9JiTVyJsiolBxKjK5JRRRUFhRRRQA1ulUbjrV9ulUZ+ppmVTYgxRilxRimYCYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFAEtv8AerTj+7Wbb/eFaUf3aaLiOoooqigooooAKKKKACiiigAooooAKKKKACiiigDGxRinYoxWZkNxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUAJil2mpIlyauJCCKidRRGZ+00bTWl5Ao8gVHtkFjN2mjaa0vIFHkCj2yCxmFTioj1rUlhAFZ0ow1dWHmpCaGUUUV1CCiiigAooooAKKKKACiiigAooooAKKKKAFTrWjB0rOTrWjB0rCsbUtyaiiiuc3CiiigBG6VSn6mrrdKpzdaZlUIMUYp2KMUGA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQBJB96tFPu1nwDmtBOlUi4jqKKKooKKKKACiiigAooooAKKKKACiiigAooooAycUYpcUYrMyExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAJIPvCtFOlUIeoq+nSuWvuND6KKK5ygooooAin+5WRP9+tef7lZE/369DBksjooor0CQooooAKKKKACiiigAooooAKKKKACiiigBU61owdKzk61owdKwrG1LcmooornNwooooARulVJutWz0qrN1oMqhDijFLijFMwExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAJIOtX06VQh+9V9OlUi4jqKKKooKKKKACiiigAooooAKKKKACiiigAooooAy8UYp2KMVmZDcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFAEkPUVfTpVCHqKvp0rlr7lIdRRRXOMKKKKAIp/uVkT/frXn+5WRP8Afr0MGSyOiiivQJCiiigAooooAKKKKACiiigAooooAKKKKAFTrV6FwBVAdasxk4rGqXGVi35go8wVW5o5rnsV7Qs+YKPMFVuaOaLB7QsFxUEhyaTmigTncbijFOxRiggbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAdGcGrayDFUqXcadxp2LvmCjzBVPcaNxp3HzFzzBR5gqnuNG40XDmLnmCjzBVPcaNxouHMXPMFHmCqe40bjRcOYueYKPMFU9xo3Gi4cxc8wUeYKp7jRuNFw5i55go8wVT3GjcaLhzCYoxS4oxUkiYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFAD4utXl6CqUXWrq/drlr7lIdRRRXOMKKKKAIp/uVkT/frXn+5WRP8Afr0MGSyOiiivQJCiiigAooooAKKKKACiiigAooooAKKKKAFXrViPpVdetWY+lY1RjsUYpcUYrnATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA6L71XF6VUi61cXpXLX3KQtFFFc4wooooAjlGVrNmhJatWmlAa3pVnTFYyPINHkGtfyxR5Yrf64xWMjyDR5BrX8sUeWKPrjCxkeQaPINa/lijyxR9cYWMjyDR5BrX8sUeWKPrjCxkeQaPINa/lijyxR9cYWMgwkUwxmteSMYqoyjNbU8Q5A0Utho2Grm0UbRWntWIqqhzVhBgU7bSgYqJT5gEop1FQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FAC0UtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFADo+tW16VVj61aXpXLX3KQtFFFc4wooooAKKKKACiiigAooooAKKKKACiiigAooooAZJ0qo3WrcnSqrda6qGxLG0UtFdAhKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigB1FLRSASilooASilooASilooASilooASilooASilooASilooASilooASilooAVOtWV6VXTrVgdK5q5SFooornGFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFADJOlV261ZfpVc9a6qOxLG0UtFbiEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAP//Z","data:image/jpeg;base64,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qFpKVjHzeUiThyp6ZHmLwfX61o6jfWTadpmnnVFlhtmcTNZwtEJIWeLChSozJ8rMWYYO1eSQK5TFGKAOg8R3lu2k6VYW95FdvaNNmS3haKPY2zbkFVJf5W3NjkbRk4rSvtWsrzXPFI/tFUsdVmufs7skm2LM8cqyFQuQHEYXgE8cjpXG4oxQB1GoatZC51K7tJi9x9lg062OwglRCsUkvI4yqEYPP7z2rladijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFADaKdijFAC4oxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQA7FGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAHYoxS4oxSATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoAdijFLRQMTFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooAWinUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQA2inUUALRTsUYpANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUANop2KMUALijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxTkTcaBkeKMVbFuSOlH2Y1PMh8rKmKMVb+zGj7MaOZBysqYoxVv7MaPsxo5kHKypijFW/sxo+zGjmQcrKmKMVb+zGj7MaOZBysqYoxVv7MaPsxo5kHKypijFW/sxo+zGjmQcrKmKMVb+zGj7MaOZBysqYoxVv7MaPsxo5kHKyvijFOxRiqJG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKntx8wqLFTW/wB4UpbFR3NONRtFP2Cki+7T65WzqQ3YKNgp1FK4xuwUbBTqKLgN2CjYKdRRcBuwUbBTqKLgN2CjYKdRRcBuwUbBTqKLgN2CjYKdRRcBuwUbBTqKLgYWKMUuKMV2HEJijFLipYVywpDRHsNHlmtaK2BXpUn2VfSs/aI1VFmL5Zo8s1tfZV9KPsq+lHtEP2LMXyzR5Zra+yr6UfZV9KPaIPYsxfLNHlmtr7KvpR9lX0o9og9izF8s0eWa2vsq+lH2VfSj2iD2LMXyzR5Zra+yr6UfZV9KPaIPYsxfLNHlmtr7KvpR9lX0o9og9izF8s0eWa2vsq+lH2VfSj2iD2LMXyzR5Zra+yr6UfZV9KPaIPYsxfLNHlmtr7KvpR9lX0o9og9izEKkUmK0rqEKKz2HNWncylHlG4oxS4oxVEiYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKmtx8wqLFTwD5hSlsVHc0o/uin0yP7op9cj3OtBRRRSAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAMXFGKXFGK7DiExU1v94VFiprcfMKT2KjubNv8AdqWorf7tTVyvc7VsJRS0UhiUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtFACUUtJQBQvehrKbrWte9DWUw5rpp7HLV3G4oxS4oxVmImKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJipoOoqLFSxHBpPYqO5ox/dp9QJKAKXzRXM0zpTRNRUPmijzRRysd0TUVD5oo80UcrC6JqKh80UeaKOVhdE1FQ+aKPNFHKwuiaiofNFHmijlYXRNRUPmijzRRysLomoqHzRR5oo5WF0TUVD5oo80UcrC6M6ilorqOQSpYPvCo6lg+8KT2HHc14Puipqhg+7Ulc1rs7LpLUdRTc0Zo5WL2kR1FNzRmjlYe0iOopuaM0crD2kR1FNzRmjlYe0iOopuaM0crD2kR1FNzRmjlYe0iOopuaM0crD2kR1FNzRmjlYe0iOpKTNLSasUpJ7FK96Vlt1rUvOhrMbrW9PY5qu42ilorQyEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEopaKAEoHFLRQAu40bz60lFAXYu8+tG8+tJRSC7F3n1o3n1pKKAuxd59aN59aSigLsXefWjefWkooC7F3n1o3n1pKKAuxd59aN59aSigLsXefWjefWkooC7F3n1o3n1pKKAux2KMU7FGKYDcVJD96m4qSH71J7DjuasP3acabD92nGs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UBYTmjFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAuKMUtFIBMUYpaKAExU0PWoqmh60nsJltegpaQdBS1gZBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAVHL0qSo5elNbjRSfrTcU9+tNrdGqExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAHYoxS4oxQMTFGKXFGKAExUkZxTMUo4pMTLQcYpd4qrk0ZNRyE8pa3ijeKq5NGTRyBylreKN4qrk0ZNHIHKWt4o3iquTRk0cgcpa3ijeKq5NGTRyBylreKN4qrk0ZNHIHKWt4o3iquTRk0cgcpa3ijeKq5NGTRyBylreKZIwIqDJoJNNQDlGt1pMUtGKooTFGKXFGKYxMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAHYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQAmKMUuKMUAJijFLijFACYoxS4oxQA7FGKdRSAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAbijFOooAXFGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFAC4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoA//2Q==","data:image/jpeg;base64,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2xTdW1iwvNBkBktjM1la20UMcBWZJIhGrM8m3DIQjYXceWU4BBNcfijFA+Y2tLu7NPD11ZXssimXULSUrGPm8pEnDlT0yPMXg+v1rS1K9sm07TNPOqrLDbM4maziaISws8WFClRmT5WYswwdq8kgVyeKMUCudD4kvLd9J0qwt72G7e0ab95bwtFHsbZtyCqkv8rbmxyNoycVpX2rWV5rvikf2iqWOqzXP2d2STbFmeOVZCoXIDiMLwCeORwK4zFGKAudTqGrWQudTu7SYvcfZYNOtjsIJUQrFJLyOMqhGDz+99q5TFOxRigG7jcUYp2KMUCG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBaKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBKKWigBaKdRQIbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAXFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigB1FLijFACUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFACUUuKMUAJRS4oxQAlFLijFAC0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBcUYp2KMUhDcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FKATSgc1bgiBFNK4FTaaNprS+zij7OKfKOxm7TRtNaX2cUfZxT5QsZu00bTWl9nFH2cUcoWM3aaNprS+zij7OKOULGbtNG01pfZxR9nFHKFjN2mjaa0vs4o+zijlCxm7TRtNaX2cUfZxRyhYzdpo2mtL7OKPs4o5QsZu00bTWl9nFH2cUcoWM3aaNprS+zikaAAUuULGbikxU8yYNRYpCG4oxTsUYpANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUALijFLRQAmKMUtFACYoxS0UAJijFLRQAmKMUtFACYoxS0UAJijFLRQAmKMUtFACopY4qylozDpTbQZcV0lpCpQcVEpWMpz5Tn/sTeho+xN6Guo8hPQUeQnoKz9ozP2xy/wBib0NH2JvQ11HkJ6CjyE9BR7Rh7Y5f7E3oaPsTehrqPIT0FHkJ6Cj2jD2xy/2JvQ0fYm9DXUeQnoKPIT0FHtGHtjl/sTeho+xN6Guo8hPQUeQnoKPaMPbHL/Ym9DR9ib0NdR5Cego8hPQUe0Ye2OX+xN6Gj7E3oa6jyE9BR5Cego9ow9scv9ib0NH2JvQ11HkJ6CjyE9BR7Rh7Y5Y2bAdKryRlDzXXSwLtPFc9qKAOcVcZ3LhU5jOxRilorQ2ExRilooATFGKWigAA5q9bdKpL1q9bdKqI0WaKKK0GFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUjdKWkbpQBn3A5qvirNx1NV6yZImKMUtFIBMUYpaKAExRilooATFGKWigBMUYpaKAExRilooATFGKWigBaKdRQIbRTqKAG0U6igBtFOooAbRTqKAG0U6igBtFOooAbRTqKAJ7P74rp7P/AFYrmbT74rprP/VisahhWLFFFFZHOFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFADJfuGuc1L75ro5fuGud1L75rSnubUtzMop1FbnSNop1FADaKdRQAi9au2/SqY61dt+lVEaLFFFFaFBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFI3SlpG6UAUZ+tV6sT9ahrJksbRTqKQhtFOooAbRTqKAG0U6igBtFOooAbRTqKAG0U6igBcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYoxQBPaffFdJaf6sVzlp98V0lp/qxWNQ56xPRRRWRgFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFADJfuGue1H75ropfuGue1H75rSnubUtzNoxTsUYrc6RuKMU7FGKAG4oxTsUYoAQdat2/SqoHNW4KqI0T0UUVoUFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUjdKWkbpQBSn61Dip5utRYrJksbijFOxRikIbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAXFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigCa0H7wV0lp/qxXO2o+cV0Vr/qxWNQ56pPRRRWRgFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFADZPuGue1H75roZPumuf1AfOa0p7mtLcz8UYp2KTBrc6hMUYpcGjBoATFGKXBowaAACrMFVwOasw9KcRomooorUoKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigApD0paQ9KQFSbrUWKmm61FismQxMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoATFGKXFGKAExRilxRigBMUYpcUYoAWinUUhDaKdRQA2inUUANop1FADaKdRQA2inUUANop1FADaKdRQBNa/fFdDa/6sVz9r98V0Nr/qxWVQwqk1FFFZGAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAI4ytZN3b7mrXPSq0gGa0pbm1Hcx/sppPsprV2ijaK6bHUZX2U0fZTWrtFG0UWAyvspo+ymtXaKNoosBlfZTS+XsrUKjFU5xTSGivRRRVjCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKQ9KWkPSgCtL1qKppetR1iyGNop1FIQ2inUUANop1FADaKdRQA2inUUANop1FADaKdRQAuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAltfviugtfuCsC2Hzit+2+4KyqGFUmooorIwCiiigAooooAKKKKACiiigAooooAKKKKACiiigAPSq8nWrB6VXk61rS3NqO5HRRRXQdQUUUUAFFFFAAelUrirp6VSuKpDRXoooqhhRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFB6UUGgCvJ1qPFSyDmmYrF7kMbijFOxRikIbijFOxRigBuKMU7FGKAG4oxTsUYoAbijFOxRigBuKMU7FGKAG4oxTsUYoAXFGKdijFADcUYp2KMUANxRinYoxQA3FGKdijFADcUYp2KMUANxRinYo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"];
+const minsAgo=(m)=>new Date(Date.now()-m*60000).toISOString();
+let ents={
+ "alarm_control_panel.home_security":{state:"disarmed",attributes:{}},
+ "lock.front_door":{state:"locked",last_changed:minsAgo(4),attributes:{}},
+ "lock.garage_entry_door":{state:"locked",last_changed:minsAgo(95),attributes:{}},
+ "cover.garage_door":{state:"closed",last_changed:minsAgo(180),attributes:{}},
+ "binary_sensor.front_door":{state:"off",attributes:{device_class:"door"}},
+ "binary_sensor.patio_door":{state:"off",attributes:{device_class:"door"}},
+ "binary_sensor.garage_door":{state:"off",attributes:{device_class:"door"}},
+ "binary_sensor.left_bedroom_window":{state:"off",attributes:{device_class:"window"}},
+ "binary_sensor.bedroom_glassbreak":{state:"off",attributes:{device_class:"vibration"}},
+ "binary_sensor.panel_glass_break":{state:"off",attributes:{device_class:"vibration"}},
+ "binary_sensor.garage_closet_flood":{state:"off",attributes:{device_class:"moisture"}},
+ "binary_sensor.garage_closet_f_flood":{state:"off",attributes:{device_class:"moisture"}},
+ "binary_sensor.motion_detector":{state:"off",attributes:{device_class:"motion"}}};
+["front_porch","driveway","garage","backyard"].forEach((n,i)=>ents["camera."+n]={state:"idle",attributes:{entity_picture:CAMS[i]}});
+ents["climate.thermostat"]={state:"heat",attributes:{current_temperature:69,temperature:72,hvac_action:"heating",hvac_modes:["heat","cool","heat_cool","off"]}};
+[["living_room",204],["kitchen",255],["shoe_hall",0],["porch",153],["garage",0],["bedroom",0],["front_yard_garden",178],["back_yard_garden",0]].forEach(([n,b])=>ents["light."+n]={state:b?"on":"off",attributes:b?{brightness:b}:{}});
+ents["input_boolean.security_night_schedule"]={state:"on",attributes:{}};
+ents["input_boolean.security_morning_disarm"]={state:"off",attributes:{}};
+ents["input_datetime.security_night_arm"]={state:"23:00:00",attributes:{}};
+ents["input_datetime.security_morning_disarm"]={state:"06:30:00",attributes:{}};
+{const __h=new Date().getHours(),__night=__h<7||__h>=18;ents["weather.forecast_home"]={state:__night?"clear-night":"sunny",attributes:{temperature:__night?46:58,high:60,low:44}};}
+const WX={sunny:[84,88,70],partlycloudy:[66,70,55],cloudy:[56,59,47],rainy:[52,55,46],"lightning-rainy":[74,79,66],snowy:[28,31,22],"clear-night":[45,54,39]};
+window.__setWeather=(c)=>{const [t,h,l]=WX[c]; ents["weather.forecast_home"]={state:c,attributes:{temperature:t,high:h,low:l},last_changed:new Date().toISOString()};
+  ents["sun.sun"]={state:c==="clear-night"?"below_horizon":"above_horizon",attributes:{}}; push();};
+ents["sun.sun"]={state:(new Date().getHours()>=7&&new Date().getHours()<17)?"above_horizon":"below_horizon",attributes:{}};
+ents["binary_sensor.smoke_detector"]={state:"off",attributes:{device_class:"smoke"}};
+ents["binary_sensor.co_detector"]={state:"off",attributes:{device_class:"carbon_monoxide"}};
+window.__simulateLeak=()=>{ setS("binary_sensor.garage_closet_flood","on"); later(8000,()=>setS("binary_sensor.garage_closet_flood","off")); };
+window.__simulateFire=()=>{ setS("binary_sensor.smoke_detector","on"); };
+ents["person.guest"]={entity_id:"person.guest",state:"home",attributes:{friendly_name:"Guest",user_id:"u1"}};
+ents["person.alex"]={entity_id:"person.alex",state:"not_home",attributes:{friendly_name:"Alex Morgan",user_id:"u2"}};
+ents["person.sam"]={entity_id:"person.sam",state:"home",attributes:{friendly_name:"Sam Morgan"}};
+ents["switch.noonlight_alarm"]={state:"off",attributes:{}};
+window.__openDoor=(id)=>{ setS(id,"on"); later(1500,()=>setS(id,"off")); };
+let listener=null, timers=[];
+const push=()=>{ents={...ents}; listener&&listener(ents)};
+const setS=(id,state)=>{ents[id]={...ents[id],state,last_changed:new Date().toISOString()};push()};
+const later=(ms,f)=>timers.push(setTimeout(f,ms));
+async function getAuth(){return {}}
+async function createConnection(){return {addEventListener(){}}}
+async function getUser(){return demoUser || {name:"Guest",is_admin:false,role:"guest"}}
+function subscribeEntities(c,cb){listener=cb;cb(ents)}
+const AL="alarm_control_panel.home_security";
+async function callService(conn,domain,service,data={},target={},returnResponse){
+  await new Promise(r=>setTimeout(r,250));
+  const k=domain+"."+service;
+  if(k==="weather.get_forecasts"){ const w=ents["weather.forecast_home"]; return {response:{"weather.forecast_home":{forecast:[{condition:w.state,temperature:w.attributes.high,templow:w.attributes.low}]}}}; }
+  if(k==="alarm_control_panel.alarm_arm_home") setS(AL,"armed_home");
+  else if(k==="alarm_control_panel.alarm_arm_away"){ setS(AL,"arming"); if(ents["cover.garage_door"].state==="open"){setS("cover.garage_door","closing");later(3000,()=>setS("cover.garage_door","closed"))} later(5000,()=>ents[AL].state==="arming"&&setS(AL,"armed_away")); }
+  else if(k==="alarm_control_panel.alarm_disarm"){ if(data.code!=="1234") throw {message:"Wrong code. In this demo the code is 1234."}; timers.forEach(clearTimeout); timers=[]; setS(AL,"disarmed"); ["binary_sensor.garage_door","binary_sensor.motion_detector"].forEach(i=>setS(i,"off")); }
+  else if(k==="lock.lock"){ [].concat(target.entity_id).forEach(id=>{ if(ents[id].state!=="locked"){ setS(id,"locking"); later(1500,()=>setS(id,"locked")); } }); }
+  else if(k==="lock.unlock"){ [].concat(target.entity_id).forEach(id=>{ setS(id,"unlocking"); later(1500,()=>setS(id,"unlocked")); }); }
+  else if(k==="script.security_unlock_for_responders"){ setS("lock.front_door","unlocking"); later(1500,()=>setS("lock.front_door","unlocked")); }
+  else if(k==="input_boolean.toggle"){ const id=target.entity_id; setS(id, ents[id].state==="on"?"off":"on"); }
+  else if(k==="input_datetime.set_datetime"){ setS(target.entity_id, data.time); }
+  else if(k==="siren.turn_off"){ later(2500,()=>setS("binary_sensor.smoke_detector","off")); }
+  else if(domain==="light"){ [].concat(target.entity_id).forEach(id=>{ ents[id]={...ents[id],state:service==="turn_on"?"on":"off",attributes:service==="turn_on"?{brightness:255}:{}}; }); push(); }
+  else if(k==="climate.set_temperature"){ const c=ents["climate.thermostat"],a={...c.attributes,temperature:data.temperature};
+    a.hvac_action=c.state==="heat"?(a.current_temperature<a.temperature?"heating":"idle"):c.state==="cool"?(a.current_temperature>a.temperature?"cooling":"idle"):"idle";
+    ents["climate.thermostat"]={...c,attributes:a}; push(); }
+  else if(k==="climate.set_hvac_mode"){ const c=ents["climate.thermostat"],m=data.hvac_mode,a={...c.attributes};
+    if(m==="heat_cool"){a.temperature=null;a.target_temp_low=68;a.target_temp_high=76;a.hvac_action="idle";}
+    else { if(a.temperature==null)a.temperature=m==="cool"?74:70; delete a.target_temp_low; delete a.target_temp_high;
+      a.hvac_action=m==="heat"&&a.current_temperature<a.temperature?"heating":m==="cool"&&a.current_temperature>a.temperature?"cooling":"idle"; }
+    ents["climate.thermostat"]={...c,state:m,attributes:a}; push(); }
+  else if(k==="cover.open_cover"){ setS("cover.garage_door","opening"); later(3000,()=>setS("cover.garage_door","open")); }
+  else if(k==="cover.close_cover"){ setS("cover.garage_door","closing"); later(3000,()=>setS("cover.garage_door","closed")); }
+}
+window.__simulateBreakIn=()=>{
+  if(ents[AL].state==="disarmed") setS(AL,"armed_away");
+  setS("binary_sensor.garage_door","on"); setS(AL,"pending");
+  later(1200,()=>setS("binary_sensor.motion_detector","on"));
+  later(7000,()=>{ if(ents[AL].state!=="pending") return; setS(AL,"triggered");
+    if(ents["lock.front_door"].state==="locked") document.getElementById("alarmDlg").showModal(); });
+};
+
+
+const $ = (id) => document.getElementById(id);
+const TOKEN_KEY = "hs_tokens";
+let conn = null, entities = {}, userName = "", userIsAdmin = false, userRole = "guest", demoUser = null, alarmPromptShown = false;
+
+const store = {
+  load() { try { return JSON.parse(localStorage.getItem(TOKEN_KEY)) || undefined; } catch { return undefined; } },
+  save(t) { try { t ? localStorage.setItem(TOKEN_KEY, JSON.stringify(t)) : localStorage.removeItem(TOKEN_KEY); } catch {} },
+};
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 3200);
+}
+
+/* ---------------- sign in with Home Assistant (supports MFA) ---------------- */
+async function connect(interactive) {
+  const hassUrl = CONFIG.hassUrl || location.origin;
+  const isCallback = location.search.includes("auth_callback=1");
+  if (!interactive && !isCallback && !store.load()) return;
+  try {
+    $("loginMsg").textContent = "";
+    const auth = await getAuth({ hassUrl, loadTokens: store.load, saveTokens: store.save });
+    if (isCallback) history.replaceState(null, "", location.pathname);
+    conn = await createConnection({ auth });
+    const me = await getUser(conn);
+    userName = me.name; userIsAdmin = !!(me.is_admin || me.is_owner);
+    userRole = me.role || (userIsAdmin ? "admin" : "member"); applyRole();
+    $("who").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+    $("login").classList.add("hidden");
+    $("app").classList.remove("hidden");
+    conn.addEventListener("disconnected", () => ($("conn").textContent = "Connection lost. Reconnecting…"));
+    conn.addEventListener("ready", () => ($("conn").textContent = ""));
+    subscribeEntities(conn, (ents) => { const first = !Object.keys(entities).length; entities = ents; render(); if (first) { refreshCams(); buildBriefing(true); } else scheduleBriefing(); watchDoors(first); watchAlarm(); watchFire(); watchLeak(); });
+  } catch (err) {
+    store.save(null);
+    $("loginMsg").textContent =
+      err === ERR_INVALID_AUTH ? "Your sign-in expired. Sign in again." :
+      err === ERR_HASS_HOST_REQUIRED ? "Set hassUrl in the CONFIG section of this file." :
+      "Can't reach Home Assistant. Check the address and your internet connection.";
+  }
+}
+const ACCOUNTS = {
+  admin:  { pw: "admin123",  name: "Donn Gordon",   role: "admin"  },
+  member: { pw: "member123", name: "Family Member", role: "member" },
+  guest:  { pw: "guest123",  name: "Guest",         role: "guest"  },
+};
+const PERMS = {
+  admin:  { arm: true,  unlock: true,  manage: true  },
+  member: { arm: true,  unlock: true,  manage: false },
+  guest:  { arm: false, unlock: false, manage: false },
+};
+const can = (p) => !!(PERMS[userRole] && PERMS[userRole][p]);
+function applyRole() {
+  document.body.setAttribute("data-role", userRole);
+  ["manageUsers", "manageCodes"].forEach((id) => { const el = $(id); if (el) el.style.display = can("manage") ? "" : "none"; });
+}
+$("loginForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const u = ($("username").value || "").trim().toLowerCase(), p = $("password").value || "";
+  const a = ACCOUNTS[u];
+  if (!a || a.pw !== p) { $("loginMsg").textContent = "Wrong username or password."; return; }
+  demoUser = { name: a.name, is_admin: a.role === "admin", role: a.role };
+  $("loginMsg").textContent = ""; connect(true);
+});
+document.querySelectorAll(".demoaccts .acct").forEach((b) => b.onclick = () => {
+  const a = ACCOUNTS[b.dataset.acct]; if (!a) return;
+  $("username").value = b.dataset.acct; $("password").value = a.pw; $("loginMsg").textContent = "";
+});
+$("logoutBtn").onclick = () => { store.save(null); location.reload(); };
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
+
+/* ---------------- house markers ---------------- */
+$("markers").innerHTML = CONFIG.sensors.map((s, i) =>
+  `<g class="marker" id="m${i}" transform="translate(${s.x} ${s.y})">
+     <circle class="ring" r="8"/><circle class="core" r="8"/>
+   </g>`).join("");
+
+/* ---------------- rendering ---------------- */
+const COPY = {
+  disarmed:   ["Alarm is off", "Choose Home or Away to arm it."],
+  arming:     ["Arming now", "Leave before the countdown ends."],
+  armed_home: ["Watching doors and windows", "You can move around inside."],
+  armed_away: ["Watching the whole house", "Every sensor is on guard."],
+  armed_night:["Night mode is on", ""],
+  pending:    ["Someone opened a door", "Enter your code now or the alarm goes off."],
+  triggered:  ["Alarm is going off", "Siren is on and Noonlight has been alerted."],
+  unavailable:["Can't reach the alarm", "Check that Home Assistant is running."],
+};
+
+function render() {
+  const st = entities[CONFIG.alarm]?.state || "unavailable";
+  document.body.dataset.state = st;
+  const [title, sub] = COPY[st] || [st, ""];
+  $("statusText").textContent = title;
+  $("statusSub").textContent = sub;
+
+  const off = st === "disarmed", offline = st === "unavailable";
+  $("modeOff").setAttribute("aria-pressed", off);
+  $("modeHome").setAttribute("aria-pressed", st === "armed_home");
+  $("modeAway").setAttribute("aria-pressed", st === "armed_away" || st === "arming");
+  $("modeHome").disabled = $("modeAway").disabled = !off;
+  $("modeOff").disabled = off || offline;
+
+  // Doors
+  let responderLocked = false;
+  CONFIG.locks.forEach((d, i) => {
+    const l = entities[d.id], ls = l?.state || "unavailable", locked = ls === "locked", dial = $("lockDial" + i);
+    if (!dial) return;
+    if (d.id === CONFIG.responderLock) responderLocked = locked;
+    dial.classList.toggle("locked", locked);
+    dial.disabled = !["locked", "unlocked", "open"].includes(ls);
+    $("shackle" + i).setAttribute("d", locked ? "M8 11V7a4 4 0 0 1 8 0v4" : "M8 11V7a4 4 0 0 1 7.5-1.8");
+    $("lockText" + i).textContent = { locked: "Locked", unlocked: "Unlocked", open: "Open", locking: "Locking…", unlocking: "Unlocking…", jammed: "Jammed" }[ls] || "Offline";
+    $("lockHow" + i).textContent = locked ? "Tap to unlock." : ls === "jammed" ? "Check the door by hand." : dial.disabled ? "The lock isn't responding." : "Tap to lock.";
+    dial.setAttribute("aria-label", (locked ? "Unlock " : "Lock ") + d.label);
+    const sens = d.sensor ? entities[d.sensor] : null, ajar = sens?.state === "on";
+    if (ajar && !locked) $("lockHow" + i).textContent = "The door is open. Close it, then tap to lock.";
+    $("lockSub" + i).textContent = (sens ? (ajar ? "Door is open. " : "Door is closed. ") : "") + (l ? "Changed " + ago(l.last_changed) : "");
+    $("lockSub" + i).style.color = ajar ? "var(--flare)" : "";
+  });
+  $("lockAll").disabled = !CONFIG.locks.some((d) => entities[d.id]?.state === "unlocked" || entities[d.id]?.state === "open");
+
+  // Garage
+  if (CONFIG.garage) {
+    const g = entities[CONFIG.garage], gs = g?.state || "unavailable";
+    const shut = gs === "closed";
+    $("garageDial").classList.toggle("locked", shut);
+    $("garageDial").disabled = !["open", "closed"].includes(gs);
+    $("slats").style.opacity = shut ? 1 : .25;
+    $("garageText").textContent = { open: "Open", closed: "Closed", opening: "Opening…", closing: "Closing…" }[gs] || "Offline";
+    $("garageHow").textContent = shut ? "Tap to open." : gs === "open" ? "Tap to close." : $("garageDial").disabled && !gs.endsWith("ing") ? "The garage opener isn't responding." : "Wait for the door to stop moving.";
+    $("garageDial").setAttribute("aria-label", shut ? "Open the garage" : "Close the garage");
+    $("garageSub").textContent = g ? "Changed " + ago(g.last_changed) : "";
+  }
+
+  // Smoke / CO
+  const fires = CONFIG.smoke.filter((d) => entities[d.id]?.state === "on");
+  if (fires.length) {
+    document.body.dataset.fire = "";
+    const co = fires.every((d) => d.kind === "co");
+    $("fireTitle").textContent = co ? "Carbon monoxide detected" : "Smoke detected";
+    $("fireText").textContent = (co ? "Get everyone outside into fresh air now. " : "Get everyone out of the house now. ") +
+      `${fires.map((d) => d.label).join(" and ")} went off. Noonlight has been asked to send the fire department and will call you.`;
+    $("statusText").textContent = co ? "Carbon monoxide alarm" : "Fire alarm";
+    $("statusSub").textContent = "Leave the house. Help is on the way.";
+  } else delete document.body.dataset.fire;
+
+  // Water leaks
+  const wet = CONFIG.leaks.filter((d) => entities[d.id]?.state === "on");
+  if (wet.length && !fires.length) {
+    document.body.dataset.leak = "";
+    $("leakText").textContent = `${wet.map((d) => d.label).join(" and ")} ${wet.length > 1 ? "are" : "is"} wet. Check the water heater and turn off the water if you can.`;
+  } else delete document.body.dataset.leak;
+
+  // Night schedule
+  renderNight();
+  if ($("settings").classList.contains("open")) renderSettings();
+  renderWalk();
+
+  // Climate
+  if (CONFIG.thermostat) renderClimate();
+
+  // Lights
+  CONFIG.lights.forEach((l, i) => {
+    const e = entities[l.id], el = $("light" + i); if (!el) return;
+    const on = e?.state === "on", b = e?.attributes?.brightness;
+    el.className = "light" + (on ? " on" : "") + (!e || e.state === "unavailable" ? " gone" : "");
+    el.setAttribute("aria-pressed", on);
+    el.querySelector(".st").textContent = !e || e.state === "unavailable" ? "Offline" : on ? (b ? `On, ${Math.round(b / 2.55)}%` : "On") : "Off";
+  });
+  $("allOff") && ($("allOff").disabled = !CONFIG.lights.some((l) => entities[l.id]?.state === "on"));
+
+  // Sensors (house drawing + list)
+  $("sensors").innerHTML = CONFIG.sensors.map((s, i) => {
+    const e = entities[s.id], on = e?.state === "on" || e?.state === "open" || e?.state === "opening";
+    const motion = e?.attributes?.device_class === "motion" || s.id.includes("motion");
+    const cls = !e ? "gone" : on ? "open" : "";
+    $("m" + i).setAttribute("class", "marker " + cls);
+    const glass = s.kind === "glass";
+    const word = !e ? "Offline" : glass ? (on ? "Glass breaking!" : "Listening") : motion ? (on ? "Movement" : "Still") : (on ? "Open" : "Closed");
+    return `<li class="${cls}"><span class="pip"></span><span class="nm">${escapeHtml(s.label || e?.attributes?.friendly_name || s.id)}</span><span class="st">${word}</span></li>`;
+  }).join("");
+
+  // First render after sign-in: offer to unlock if the alarm is going off.
+  if (!alarmPromptShown && entities[CONFIG.alarm]) {
+    alarmPromptShown = true;
+    if (st === "triggered" && responderLocked) $("alarmDlg").showModal();
+  }
+}
+
+/* ---------------- sound (made in the browser, no files needed) ---------------- */
+let audio = null;
+function unlockAudio() {                    // phones only allow sound after a tap
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); } catch {}
+}
+addEventListener("pointerdown", unlockAudio, { passive: true });
+function tone(freq, start, len, vol = 0.25, type = "sine") {
+  const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + start;
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  o.connect(g).connect(audio.destination); o.start(t); o.stop(t + len + 0.05);
+}
+function buzz(pattern) { if (prefs.get("vibrate", true)) { try { navigator.vibrate?.(pattern); } catch {} } }
+function playSound(kind) {
+  if (!audio || !prefs.get("sound", true)) return;
+  try {
+    if (kind === "chime") { tone(880, 0, 0.6); tone(660, 0.28, 0.9); }                  // ding-dong
+    else if (kind === "warning") { for (let i = 0; i < 4; i++) { tone(988, i * 0.45, 0.3, 0.35, "square"); } }
+    else if (kind === "alarm") { for (let i = 0; i < 8; i++) { tone(i % 2 ? 740 : 1046, i * 0.38, 0.34, 0.4, "sawtooth"); } }
+  } catch {}
+}
+let leakWasOn = false;
+function watchLeak() {
+  const on = CONFIG.leaks.some((d) => entities[d.id]?.state === "on");
+  if (on && !leakWasOn) { playSound("warning"); buzz([400, 150, 400, 150, 400]); }
+  leakWasOn = on;
+}
+let fireWasOn = false;
+function watchFire() {
+  const on = CONFIG.smoke.some((d) => entities[d.id]?.state === "on");
+  if (on && !fireWasOn) { playSound("alarm"); buzz([900, 200, 900, 200, 900, 200, 900]); }
+  fireWasOn = on;
+}
+let lastAlarmState = null;
+function watchAlarm() {
+  const st = entities[CONFIG.alarm]?.state;
+  if (lastAlarmState && st !== lastAlarmState && st === "triggered") {
+    playSound("alarm"); buzz([900, 200, 900, 200, 900, 200, 900]);
+  }
+  lastAlarmState = st;
+}
+
+/* ---------------- vibrate + sound when a door or window opens ---------------- */
+const lastSeen = {};
+function watchDoors(first) {
+  CONFIG.sensors.forEach((s) => {
+    const e = entities[s.id]; if (!e) return;
+    const motion = e.attributes?.device_class === "motion" || s.id.includes("motion");
+    const open = e.state === "on" || e.state === "open" || e.state === "opening";
+    if (!first && !motion && open && lastSeen[s.id] === false) {
+      const armed = (entities[CONFIG.alarm]?.state || "").startsWith("armed") || ["pending", "triggered"].includes(entities[CONFIG.alarm]?.state);
+      if (armed || prefs.get("chimeOff", true)) { buzz(armed ? [500, 150, 500, 150, 900] : [250, 120, 250]); playSound(armed ? "warning" : "chime"); }
+      toast(s.kind === "glass" ? `${s.label}: glass breaking` : `${s.label} opened`);
+    }
+    lastSeen[s.id] = open;
+  });
+}
+
+function ago(iso) {
+  const s = Math.max(0, (Date.now() - new Date(iso)) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.floor(s / 60) + " min ago";
+  if (s < 86400) return Math.floor(s / 3600) + " h ago";
+  return Math.floor(s / 86400) + " days ago";
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]); }
+
+/* ---------------- actions ---------------- */
+async function run(done, domain, service, data, target) {
+  try { await callService(conn, domain, service, data, target); toast(done); return true; }
+  catch (e) { toast(e?.message || "Home Assistant didn't accept that. Try again."); return false; }
+}
+
+$("modeHome").onclick = () => { if (!can("arm")) return toast("Your account can't change the alarm."); run("Armed for Home", "alarm_control_panel", "alarm_arm_home", {}, { entity_id: CONFIG.alarm }); };
+$("modeAway").onclick = () => { if (!can("arm")) return toast("Your account can't change the alarm."); run("Arming for Away. Leave now.", "alarm_control_panel", "alarm_arm_away", {}, { entity_id: CONFIG.alarm }); };
+$("modeOff").onclick = async () => {
+  if (!can("arm")) return toast("Your account can't change the alarm.");
+  const code = await askPin("Enter your code to disarm");
+  if (code) run("Alarm is off", "alarm_control_panel", "alarm_disarm", { code }, { entity_id: CONFIG.alarm });
+};
+
+const unlockForResponders = () =>
+  run("Front door unlocked for responders", "script", "security_unlock_for_responders", { requested_by: userName });
+
+/* ---------------- confirm sheet (tap, then confirm: works on every phone) ---------------- */
+const ICO_UNLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 7.5-1.8"/></svg>';
+const ICO_GARAGE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-6h10v6"/></svg>';
+const ICO_HELP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M12 8v5M12 16h.01" stroke-linecap="round"/></svg>';
+function confirmSheet({ title, text, yes, icon, danger = false }) {
+  return new Promise((resolve) => {
+    const box = $("confirm");
+    $("cfTitle").textContent = title; $("cfText").textContent = text; $("cfYes").textContent = yes; $("cfIco").innerHTML = icon;
+    box.classList.toggle("danger", danger); box.classList.add("open"); buzz(30);
+    const done = (v) => { box.classList.remove("open"); $("cfYes").onclick = $("cfNo").onclick = box.onclick = null; resolve(v); };
+    $("cfYes").onclick = () => done(true);
+    $("cfNo").onclick = () => done(false);
+    box.onclick = (e) => { if (e.target === box) done(false); };
+  });
+}
+
+// Doors: tap a locked door to unlock (after confirming); tap an unlocked door to lock it.
+const LOCK_ICON = (i) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <rect x="4" y="11" width="16" height="10" rx="2.5"/><path id="shackle${i}" d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
+$("doors").innerHTML = CONFIG.locks.map((d, i) =>
+  `<div class="door compact">
+     <button class="dial" id="lockDial${i}">${LOCK_ICON(i)}</button>
+     <div>
+       <div class="name">${escapeHtml(d.label)}</div>
+       <div class="what" id="lockText${i}">…</div>
+       <div class="how" id="lockHow${i}"></div>
+       <div class="when" id="lockSub${i}"></div>
+     </div>
+   </div>`).join("");
+CONFIG.locks.forEach((d, i) => {
+  const dial = $("lockDial" + i);
+  dial.addEventListener("click", async () => {
+    if (!can("unlock")) return toast("Your account can't lock or unlock doors.");
+    if (dial.disabled) return toast(`${d.label} lock isn't responding`);
+    if (dial.classList.contains("locked")) {
+      const ok = await confirmSheet({ title: `Unlock ${d.label.toLowerCase()}?`, text: "Anyone can open the door once it's unlocked.", yes: "Unlock", icon: ICO_UNLOCK });
+      if (ok) run(`${d.label} unlocked`, "lock", "unlock", {}, { entity_id: d.id });
+    } else run(`${d.label} locked`, "lock", "lock", {}, { entity_id: d.id });
+  });
+});
+$("fireFalse").onclick = () => {
+  $("fireNote").textContent = "When Noonlight calls, tell them your PIN and that it was cooking. They'll cancel. Then clear the smoke and press the detector's button to silence it.";
+  run("Siren off", "siren", "turn_off", {}, { entity_id: "all" });
+};
+$("fireCall").onclick = () => { $("fireNote").textContent = "Dial 911 on your phone now."; location.href = "tel:911"; };
+$("lockAll").onclick = () => { if (!can("unlock")) return toast("Your account can't lock or unlock doors."); run("Locking all doors", "lock", "lock", {}, { entity_id: CONFIG.locks.map((d) => d.id) }); };
+$("alarmDial").addEventListener("click", async () => { $("alarmDlg").close(); await unlockForResponders(); });
+$("alarmLater").onclick = () => $("alarmDlg").close();
+
+if (CONFIG.garage) {
+  $("garageDial").addEventListener("click", async () => {
+    const g = $("garageDial");
+    if (g.disabled) return toast("The garage door is moving or not responding");
+    if (g.classList.contains("locked")) {
+      const ok = await confirmSheet({ title: "Open the garage?", text: "Make sure nothing is under the door.", yes: "Open garage", icon: ICO_GARAGE });
+      if (ok) run("Opening the garage", "cover", "open_cover", {}, { entity_id: CONFIG.garage });
+    } else run("Closing the garage", "cover", "close_cover", {}, { entity_id: CONFIG.garage });
+  });
+} else $("garageBlock").remove();
+
+/* ---------------- lights ---------------- */
+const BULB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>';
+if (!CONFIG.lights.length) $("lightsBlock").remove();
+const tile = (l, i) =>
+  `<button class="light" id="light${i}" data-light="${i}" aria-pressed="false">
+     <span class="bulb">${BULB}</span><span><span class="nm">${escapeHtml(l.label)}</span><span class="st">…</span></span>
+   </button>`;
+const groupHtml = (title, outside) => {
+  const items = CONFIG.lights.map((l, i) => [l, i]).filter(([l]) => !!l.outside === outside);
+  return items.length ? `<div class="lights-group">${title}</div><div class="lights">${items.map(([l, i]) => tile(l, i)).join("")}</div>` : "";
+};
+$("lights").innerHTML = groupHtml("Inside", false) + groupHtml("Outside", true);
+document.querySelectorAll("[data-light]").forEach((b) => b.onclick = () => {
+  const l = CONFIG.lights[b.dataset.light], e = entities[l.id];
+  if (!e || e.state === "unavailable") return toast(`${l.label} light is offline`);
+  const on = e.state === "on";
+  run(`${l.label} light ${on ? "off" : "on"}`, "light", on ? "turn_off" : "turn_on", {}, { entity_id: l.id });
+});
+$("allOff").onclick = () => run("All lights off", "light", "turn_off", {}, { entity_id: CONFIG.lights.map((l) => l.id) });
+
+/* ---------------- live weather background ---------------- */
+const Sky = (() => {
+  const cv = $("sky"), ctx = cv.getContext("2d");
+  const still = false;   // the living sky is the signature of this app — always animate it
+  let W = 0, H = 0, scene = null, stars = [], clouds = [], drops = [], flakes = [], motes = [], birds = [], planets = [];
+  let nextFlock = 0, flash = 0, nextFlash = 0, shooting = null, nextShoot = 0, last = 0, raf = 0;
+  let forest = [], fog = [], hawk = null, nextHawk = 0;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+
+  function size() {
+    const d = Math.min(2, devicePixelRatio || 1);
+    W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0);
+    buildForest();
+  }
+  // A ridge of fir silhouettes, rendered once to an offscreen sprite then layered for depth.
+  function ridgeSprite(h, color, dens) {
+    const c = document.createElement("canvas"); c.width = Math.max(1, W); c.height = h;
+    const x = c.getContext("2d"); x.fillStyle = color;
+    const base = h, step = Math.max(14, W / (26 * dens));
+    let px = -step; x.beginPath(); x.moveTo(0, base);
+    while (px < W + step) {
+      const tw = step * rnd(0.85, 1.5), top = Math.max(2, base - h * rnd(0.4, 0.98) * dens);
+      x.lineTo(px, base); x.lineTo(px + tw * 0.5, top); x.lineTo(px + tw, base);
+      px += tw * rnd(0.45, 0.72);
+    }
+    x.lineTo(W, base); x.lineTo(W, h); x.lineTo(0, h); x.closePath(); x.fill();
+    return c;
+  }
+  function buildForest() {
+    forest = [
+      { sp: ridgeSprite(Math.round(H * .34), "rgba(150,170,205,0.18)", 0.6), base: H * .70 },
+      { sp: ridgeSprite(Math.round(H * .42), "rgba(78,98,140,0.34)", 0.95), base: H * .85 },
+      { sp: ridgeSprite(Math.round(H * .52), "rgba(18,28,52,0.64)", 1.35), base: H + 6 },
+    ];
+    fog = [{ x: rnd(0, W), y: H * .56, o: .13, ph: 0, v: 9 }, { x: rnd(0, W), y: H * .69, o: .11, ph: 2.1, v: 6.5 }, { x: rnd(0, W), y: H * .80, o: .09, ph: 4.2, v: 5 }];
+    if (!nextHawk) nextHawk = performance.now() + 3500;
+  }
+  // Volumetric light shafts breaking through the mist.
+  function drawRays(t, a) {
+    if (a <= 0.02) return;
+    const ox = W * 0.68, oy = -H * 0.12;
+    ctx.save(); ctx.globalCompositeOperation = "screen";
+    for (let i = 0; i < 5; i++) {
+      const ang = -0.95 + i * 0.1, op = a * (0.45 + 0.55 * (0.5 + 0.5 * Math.sin(t * 0.25 + i * 1.6)));
+      ctx.save(); ctx.translate(ox, oy); ctx.rotate(ang);
+      const g = ctx.createLinearGradient(0, 0, 0, H * 1.15);
+      g.addColorStop(0, "rgba(210,226,248,0)"); g.addColorStop(0.12, `rgba(210,226,248,${op * 0.5})`);
+      g.addColorStop(0.5, `rgba(200,220,245,${op * 0.22})`); g.addColorStop(1, "rgba(200,220,245,0)");
+      ctx.fillStyle = g; ctx.fillRect(-16 - i * 2, 0, 30 + i * 3, H * 1.25); ctx.restore();
+    }
+    ctx.restore();
+  }
+  function drawForest(t, dt) {
+    const night = scene === "night" || scene === "nightcloud";
+    const rayA = ({ sun: .55, partly: .4, gloomy: .22, snow: .2, rain: .14, storm: .12, night: .08, nightcloud: .06 })[scene] ?? .25;
+    if (forest[0]) ctx.drawImage(forest[0].sp, 0, forest[0].base - forest[0].sp.height);
+    drawRays(t, rayA * (night ? .5 : 1));
+    for (let i = 1; i < forest.length; i++) { const r = forest[i]; ctx.drawImage(r.sp, 0, r.base - r.sp.height); }
+    fog.forEach((f) => {
+      f.x += f.v * dt; const span = W + 420, wx = ((f.x % span) + span) % span - 210;
+      const o = f.o * (0.65 + 0.35 * Math.sin(t * 0.2 + f.ph));
+      [wx - span, wx, wx + span].forEach((cx) => {
+        const g = ctx.createRadialGradient(cx, f.y, 0, cx, f.y, 220);
+        g.addColorStop(0, `rgba(200,214,232,${o})`); g.addColorStop(1, "rgba(200,214,232,0)");
+        ctx.fillStyle = g; ctx.save(); ctx.translate(cx, f.y); ctx.scale(1, 0.26); ctx.beginPath(); ctx.arc(0, 0, 220, 0, 6.3); ctx.fill(); ctx.restore();
+      });
+    });
+  }
+  function spawnHawk(now) {
+    const dir = Math.random() < .5 ? 1 : -1;
+    hawk = { x: dir > 0 ? -90 : W + 90, y: rnd(H * .14, H * .32), v: rnd(24, 40) * dir, s: rnd(22, 30), p: rnd(0, 6.3) };
+    nextHawk = now + rnd(16000, 30000);
+  }
+  function drawHawk(t) {
+    if (!hawk) return;
+    const b = hawk, span = b.s * 1.35, flex = Math.sin(t * 0.9 + b.p) * 0.16;
+    ctx.save(); ctx.translate(b.x, b.y); ctx.scale(b.v < 0 ? -1 : 1, 1); ctx.fillStyle = "rgba(16,20,30,.85)";
+    ctx.beginPath(); ctx.ellipse(0, 0, b.s * 0.5, b.s * 0.13, 0, 0, 6.3); ctx.fill();
+    ctx.beginPath(); ctx.arc(b.s * 0.52, 0, b.s * 0.1, 0, 6.3); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-b.s * 0.05, 0);
+    ctx.quadraticCurveTo(-b.s * 0.25, -span * (0.55 + flex), -b.s * 0.55, -span * (0.62 + flex));
+    ctx.quadraticCurveTo(-b.s * 0.12, -span * 0.18, b.s * 0.12, 0);
+    ctx.quadraticCurveTo(-b.s * 0.12, span * 0.18, -b.s * 0.55, span * (0.62 - flex));
+    ctx.quadraticCurveTo(-b.s * 0.25, span * (0.55 - flex), -b.s * 0.05, 0); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-b.s * 0.45, 0); ctx.lineTo(-b.s * 0.72, -b.s * 0.14); ctx.lineTo(-b.s * 0.72, b.s * 0.14); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function pick(cond, day) {
+    if (["rainy", "pouring"].includes(cond)) return "rain";
+    if (["lightning", "lightning-rainy"].includes(cond)) return "storm";
+    if (["snowy", "snowy-rainy", "hail"].includes(cond)) return "snow";
+    if (["cloudy", "fog", "windy", "windy-variant", "exceptional"].includes(cond)) return day ? "gloomy" : "nightcloud";
+    if (cond === "partlycloudy") return day ? "partly" : "nightcloud";
+    if (cond === "clear-night" || !day) return "night";
+    return "sun";
+  }
+  function build() {
+    const has = (...k) => k.includes(scene);
+    stars = has("night", "nightcloud") ? Array.from({ length: scene === "night" ? 130 : 70 }, () => ({ x: rnd(0, W), y: rnd(0, H * .6), r: rnd(.4, 1.6), p: rnd(0, 6.3) })) : [];
+    planets = has("night", "nightcloud") ? [
+      { x: W * .20, y: H * .17, r: 3.2, c: "255,150,110", glow: 17, drift: -.26 },
+      { x: W * .50, y: H * .10, r: 2.3, c: "190,210,255", glow: 12, drift: -.2 },
+      { x: W * .72, y: H * .22, r: 3.6, c: "235,205,150", glow: 19, drift: -.16, ring: true },
+    ] : [];
+    const nC = { partly: 3, gloomy: 7, rain: 6, storm: 7, snow: 5, nightcloud: 4 }[scene] || 0;
+    clouds = Array.from({ length: nC }, (_, i) => ({ x: rnd(-200, W), y: rnd(20, H * .45), s: rnd(.7, 1.5), v: rnd(4, 11) * (scene === "storm" ? 2 : 1) }));
+    drops = has("rain", "storm") ? Array.from({ length: scene === "storm" ? 140 : 100 }, () => ({ x: rnd(0, W), y: rnd(-H, H), l: rnd(10, 22), v: rnd(380, 620) })) : [];
+    flakes = has("snow") ? Array.from({ length: 80 }, () => ({ x: rnd(0, W), y: rnd(-H, H), r: rnd(1, 3.2), v: rnd(18, 45), p: rnd(0, 6.3) })) : [];
+    motes = has("sun") ? Array.from({ length: 26 }, () => ({ x: rnd(0, W), y: rnd(0, H), r: rnd(.8, 2.2), v: rnd(4, 12), p: rnd(0, 6.3) })) : [];
+    birds = []; nextFlock = performance.now() + 1500;
+  }
+  // Clouds are drawn once each onto a small blurred sprite, then moved around: soft edges, no "bubbles".
+  const sprites = {};
+  function cloudSprite(a) {
+    if (sprites[a]) return sprites[a];
+    const c = document.createElement("canvas"); c.width = 320; c.height = 170;
+    const x = c.getContext("2d");
+    x.filter = "blur(10px)"; x.fillStyle = `rgba(214,222,238,${a})`; x.beginPath();
+    [[70, 100, 40], [112, 80, 52], [168, 88, 46], [212, 104, 34], [130, 112, 44], [96, 118, 30], [190, 118, 30]]
+      .forEach(([cx, cy, r]) => { x.moveTo(cx + r, cy); x.arc(cx, cy, r, 0, 6.3); });
+    x.fill();
+    return (sprites[a] = c);
+  }
+  function cloud(c, a) { const sp = cloudSprite(a); ctx.drawImage(sp, c.x, c.y - 90 * c.s, 320 * c.s, 170 * c.s); }
+  function spawnFlock(now) {
+    const n = Math.round(rnd(3, 6)), y = rnd(H * .08, H * .38), dir = Math.random() < .5 ? 1 : -1, v = rnd(38, 60);
+    for (let i = 0; i < n; i++) birds.push({ x: dir > 0 ? -40 - i * rnd(18, 30) : W + 40 + i * rnd(18, 30), y: y + rnd(-18, 18) + Math.abs(i - n / 2) * 6,
+      s: rnd(6, 10), v: v * dir, p: rnd(0, 6.3), f: rnd(7, 10) });
+    nextFlock = now + rnd(9000, 16000);
+  }
+  function frame(now) {
+    const dt = Math.min(.05, (now - (last || now)) / 1000); last = now;
+    ctx.clearRect(0, 0, W, H);
+    const t = now / 1000;
+    // tint
+    const tint = { sun: ["rgba(255,196,120,.26)", W * .85, H * .08], partly: ["rgba(255,205,140,.14)", W * .85, H * .08],
+      gloomy: ["rgba(150,162,186,.16)", W * .5, 0], rain: ["rgba(110,140,185,.16)", W * .5, 0], storm: ["rgba(120,120,170,.18)", W * .5, 0],
+      snow: ["rgba(220,230,245,.14)", W * .5, 0], night: ["rgba(120,140,220,.10)", W * .8, H * .1], nightcloud: ["rgba(120,140,200,.08)", W * .5, 0] }[scene];
+    if (tint) { const g = ctx.createRadialGradient(tint[1], tint[2], 0, tint[1], tint[2], Math.max(W, H) * .9); g.addColorStop(0, tint[0]); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+    // sun
+    if (scene === "sun" || scene === "partly") {
+      const cx = W * .9, cy = H * .05, a = scene === "sun" ? 1 : .6;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 150); g.addColorStop(0, `rgba(255,226,170,${.55 * a})`); g.addColorStop(1, "rgba(255,226,170,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 150, 0, 6.3); ctx.fill();
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(t * .05); ctx.strokeStyle = `rgba(255,224,170,${.16 * a})`; ctx.lineWidth = 2;
+      for (let i = 0; i < 14; i++) { ctx.rotate(Math.PI / 7); ctx.beginPath(); ctx.moveTo(48, 0); ctx.lineTo(120 + 18 * Math.sin(t + i), 0); ctx.stroke(); }
+      ctx.restore();
+      ctx.fillStyle = `rgba(255,236,196,${.45 * a})`; ctx.beginPath(); ctx.arc(cx, cy, 24, 0, 6.3); ctx.fill();
+    }
+    // stars, moon, shooting stars
+    stars.forEach((s) => { ctx.fillStyle = `rgba(244,241,234,${.25 + .55 * (.5 + .5 * Math.sin(t * 1.6 + s.p))})`; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.3); ctx.fill(); });
+    if (scene === "night" || scene === "nightcloud") {
+      const mx = W * .82, my = H * .1;
+      const g = ctx.createRadialGradient(mx, my, 0, mx, my, 90); g.addColorStop(0, "rgba(230,232,255,.22)"); g.addColorStop(1, "rgba(230,232,255,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, 90, 0, 6.3); ctx.fill();
+      ctx.fillStyle = "rgba(244,241,234,.92)"; ctx.beginPath(); ctx.arc(mx, my, 22, 0, 6.3); ctx.fill();
+      ctx.globalCompositeOperation = "destination-out"; ctx.beginPath(); ctx.arc(mx + 10, my - 6, 19, 0, 6.3); ctx.fill(); ctx.globalCompositeOperation = "source-over";
+      // planets — Mars and friends, drifting slowly across the night
+      planets.forEach((p) => {
+        p.x += p.drift * dt * 16; if (p.x < -24) p.x = W + 24;
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.glow);
+        g.addColorStop(0, `rgba(${p.c},.5)`); g.addColorStop(1, `rgba(${p.c},0)`);
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.glow, 0, 6.3); ctx.fill();
+        ctx.fillStyle = `rgba(${p.c},.95)`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.3); ctx.fill();
+        if (p.ring) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(-.5); ctx.scale(1, .4); ctx.strokeStyle = `rgba(${p.c},.55)`; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, p.r * 2.2, 0, 6.3); ctx.stroke(); ctx.restore(); }
+      });
+      if (scene === "night") {
+        if (!shooting && now > nextShoot) { shooting = { x: rnd(W * .1, W * .7), y: rnd(10, H * .3), l: 0 }; nextShoot = now + rnd(2800, 6500); }
+        if (shooting) {
+          shooting.l += dt * 900; const x = shooting.x + shooting.l, y = shooting.y + shooting.l * .45;
+          const g2 = ctx.createLinearGradient(x - 90, y - 40, x, y); g2.addColorStop(0, "rgba(255,255,255,0)"); g2.addColorStop(1, "rgba(255,255,255,.85)");
+          ctx.strokeStyle = g2; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 90, y - 40); ctx.lineTo(x, y); ctx.stroke();
+          if (shooting.l > 420) shooting = null;
+        }
+      }
+    }
+    // misty forest backdrop (fir ridges, light shafts, drifting fog)
+    drawForest(t, dt);
+    // dust motes in sunshine
+    motes.forEach((m) => { m.y -= m.v * dt; m.x += Math.sin(t + m.p) * .15; if (m.y < -5) { m.y = H + 5; m.x = rnd(0, W); }
+      ctx.fillStyle = `rgba(255,228,180,${.18 + .2 * Math.sin(t * 2 + m.p)})`; ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 6.3); ctx.fill(); });
+    // clouds
+    const ca = { partly: .16, gloomy: .2, rain: .17, storm: .2, snow: .15, nightcloud: .11 }[scene] || 0;
+    clouds.forEach((c) => { c.x += c.v * dt; if (c.x > W + 40) { c.x = -180 * c.s; c.y = rnd(20, H * .45); } cloud(c, ca); });
+    // birds
+    if (["sun", "partly", "gloomy"].includes(scene)) {
+      if (now > nextFlock) spawnFlock(now);
+      ctx.strokeStyle = scene === "gloomy" ? "rgba(235,235,240,.55)" : "rgba(250,240,222,.6)"; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+      birds.forEach((b) => {
+        b.x += b.v * dt; b.y += Math.sin(t * .8 + b.p) * .12; const w = Math.sin(t * b.f + b.p), s = b.s;
+        ctx.beginPath(); ctx.moveTo(b.x - s, b.y - w * s * .35); ctx.quadraticCurveTo(b.x - s * .45, b.y - s * .55 * w - 2, b.x, b.y);
+        ctx.quadraticCurveTo(b.x + s * .45, b.y - s * .55 * w - 2, b.x + s, b.y - w * s * .35); ctx.stroke();
+      });
+      birds = birds.filter((b) => b.x > -120 && b.x < W + 120);
+    }
+    // soaring hawk, gliding across now and then
+    if (!hawk && now > nextHawk) spawnHawk(now);
+    if (hawk) { hawk.x += hawk.v * dt; hawk.y += Math.sin(t * .5 + hawk.p) * .15; drawHawk(t); if (hawk.x < -170 || hawk.x > W + 170) hawk = null; }
+    // rain
+    if (drops.length) {
+      ctx.strokeStyle = "rgba(190,210,240,.32)"; ctx.lineWidth = 1.1; ctx.beginPath();
+      drops.forEach((d) => { d.y += d.v * dt; d.x -= d.v * dt * .12; if (d.y > H) { d.y = rnd(-60, -10); d.x = rnd(0, W + 60); }
+        ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + d.l * .12, d.y - d.l); });
+      ctx.stroke();
+    }
+    // lightning
+    if (scene === "storm") {
+      if (now > nextFlash) { flash = 1; nextFlash = now + rnd(4500, 9000); }
+      if (flash > 0) { ctx.fillStyle = `rgba(220,225,255,${flash * .22})`; ctx.fillRect(0, 0, W, H); flash -= dt * 2.6; }
+    }
+    // snow
+    flakes.forEach((f) => { f.y += f.v * dt; f.x += Math.sin(t * .9 + f.p) * .35; if (f.y > H + 5) { f.y = -5; f.x = rnd(0, W); }
+      ctx.fillStyle = "rgba(244,246,252,.7)"; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.3); ctx.fill(); });
+  }
+  function loop(now) {
+    raf = requestAnimationFrame(loop);
+    if (now - (loop.t || 0) < 33) return;                 // about 30 frames a second, easy on the battery
+    loop.t = now; frame(now);
+  }
+  function start() { cancelAnimationFrame(raf); last = 0; if (still) frame(performance.now()); else raf = requestAnimationFrame(loop); }
+  addEventListener("resize", () => { size(); build(); if (still) frame(performance.now()); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) cancelAnimationFrame(raf); else start(); });
+  size();
+  return {
+    set(cond, day) { const next = pick(cond, day); document.body.setAttribute("data-sky", next); if (next === scene) return; scene = next; build(); start(); },
+  };
+})();
+// Before sign-in: sunshine by day, stars at night.
+Sky.set(null, new Date().getHours() >= 7 && new Date().getHours() < 18);
+
+/* ---------------- daily briefing (greeting, weather, advice, safety) ---------------- */
+const ICONS = {
+  sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  temp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg>',
+  bulb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>',
+  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M12 8v5M12 16h.01"/></svg>',
+};
+const prefs = {
+  get(k, d) { try { const v = localStorage.getItem("hs_" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("hs_" + k, JSON.stringify(v)); } catch {} },
+};
+let forecast = null, forecastAt = 0, briefTimer = 0, spokenText = "";
+const U = () => CONFIG.tempUnit, R = Math.round;
+const CONDITIONS = { "clear-night": "clear", cloudy: "cloudy", fog: "foggy", hail: "hail", lightning: "stormy", "lightning-rainy": "stormy",
+  partlycloudy: "partly cloudy", pouring: "heavy rain", rainy: "rainy", snowy: "snowy", "snowy-rainy": "sleet", sunny: "sunny", windy: "windy", "windy-variant": "windy", exceptional: "unusual weather" };
+
+async function loadForecast() {
+  const w = CONFIG.weather && entities[CONFIG.weather];
+  if (!w) return;
+  const key = w.state + "|" + w.attributes?.temperature;
+  if (key === loadForecast.key && Date.now() - forecastAt < 30 * 60e3) return;
+  loadForecast.key = key; forecastAt = Date.now();
+  try {
+    const r = await callService(conn, "weather", "get_forecasts", { type: "daily" }, { entity_id: CONFIG.weather }, true);
+    const resp = r?.response ?? r;
+    forecast = resp?.[CONFIG.weather]?.forecast?.[0] || null;
+  } catch { forecast = null; }
+}
+
+function scheduleBriefing() { clearTimeout(briefTimer); briefTimer = setTimeout(() => buildBriefing(false), 600); }
+
+async function buildBriefing(opening) {
+  await loadForecast();
+  const name = (userName || "").split(" ")[0];
+  const say = [`${greeting()}${name ? ", " + name : ""}.`];
+  const tips = [];
+
+  // Weather
+  const w = entities[CONFIG.weather];
+  const outside = w?.attributes?.temperature, high = forecast?.temperature, low = forecast?.templow;
+  const cond = CONDITIONS[w?.state || forecast?.condition] || "";
+  const isDay = entities["sun.sun"] ? entities["sun.sun"].state === "above_horizon" : (new Date().getHours() >= 7 && new Date().getHours() < 18);
+  Sky.set(w?.state || forecast?.condition, isDay);
+  if (outside != null) {
+    $("heroTemp").textContent = `${R(outside)}${U()}`;
+    $("heroCond").textContent = cond || (isDay ? "Clear" : "Clear night");
+    $("heroHiLo").textContent = high != null ? `H ${R(high)}${U()}   L ${low != null ? R(low) : "–"}${U()}` : "";
+    say.push(`It's ${R(outside)} degrees outside${cond ? " and " + cond : ""}.` +
+      (high != null ? ` Today's high is ${R(high)}${low != null ? ", with a low of " + R(low) : ""}.` : ""));
+  } else {
+    $("heroTemp").textContent = `—${U()}`;
+    $("heroCond").textContent = "Weather unavailable";
+    $("heroHiLo").textContent = "";
+  }
+
+  // Thermostat advice, balanced against the weather
+  const t = entities[CONFIG.thermostat];
+  if (t && outside != null) {
+    const day = high ?? outside, inside = t.attributes.current_temperature;
+    const target = t.attributes.temperature, mode = t.state;
+    let rec = null, text = "", why = "", ok = false;
+    say.push(mode === "off" ? `Inside, it's ${R(inside)} degrees, and your heating and cooling are off.`
+      : `Inside, it's ${R(inside)} degrees, and your thermostat is set to ${target != null ? R(target) : R(t.attributes.target_temp_low) + " to " + R(t.attributes.target_temp_high)} degrees.`);
+    if (day <= 62) { rec = { mode: "heat", temp: CONFIG.comfort.heat }; why = "It's a cold day"; }
+    else if (day >= 80) { rec = { mode: "cool", temp: CONFIG.comfort.cool }; why = "It's a hot day"; }
+    if (rec) {
+      ok = mode === rec.mode && target != null && Math.abs(target - rec.temp) <= 1;
+      text = ok ? `Your thermostat at ${R(target)}${U()} is a good balance for today.`
+                : `${why}. ${rec.mode === "heat" ? "Heat" : "Cool"} to ${rec.temp}${U()} for comfort that saves energy.`;
+      say.push(ok ? `That's a good balance for today.`
+                  : `${why}, so I recommend ${rec.mode === "heat" ? "heating" : "cooling"} to ${rec.temp} degrees inside. It's comfortable and saves energy.`);
+      tips.push({ cls: ok ? "good" : "warn", icon: "temp", text,
+        sub: inside != null ? `Inside it's ${R(inside)}${U()} now.` : "",
+        act: ok ? null : { label: `Set ${rec.temp}${U()}`, run: async () => {
+          if (mode !== rec.mode) await run(`${rec.mode === "heat" ? "Heat" : "Cool"} mode on`, "climate", "set_hvac_mode", { hvac_mode: rec.mode }, { entity_id: CONFIG.thermostat });
+          await run(`Set to ${rec.temp}${U()}`, "climate", "set_temperature", { temperature: rec.temp }, { entity_id: CONFIG.thermostat });
+        } } });
+    } else {
+      ok = mode === "off";
+      tips.push({ cls: ok ? "good" : "warn", icon: "temp",
+        text: ok ? "It's mild today. Heating and cooling are off, which saves the most energy." : "It's mild today. Turn the heat and air off and open a window to save energy.",
+        sub: inside != null ? `Inside it's ${R(inside)}${U()} now.` : "",
+        act: ok ? null : { label: "Turn off", run: () => run("Heating and cooling off", "climate", "set_hvac_mode", { hvac_mode: "off" }, { entity_id: CONFIG.thermostat }) } });
+      say.push(ok ? "It's mild today, so leaving them off saves the most energy."
+                  : "It's mild today. You could turn off the heat and air and open a window to save energy.");
+    }
+  }
+
+  // Lights advice
+  const daylight = entities["sun.sun"] ? entities["sun.sun"].state === "above_horizon" : (new Date().getHours() >= 7 && new Date().getHours() < 18);
+  const insideOn = CONFIG.lights.filter((l) => !l.outside && entities[l.id]?.state === "on");
+  const outsideOn = CONFIG.lights.filter((l) => l.outside && entities[l.id]?.state === "on");
+  const wasteful = daylight ? [...insideOn, ...outsideOn] : insideOn.length > 3 ? insideOn : [];
+  if (wasteful.length) {
+    const names = wasteful.map((l) => l.label);
+    const list = names.length > 3 ? `${names.slice(0, 3).join(", ")} and ${names.length - 3} more` : names.join(", ").replace(/, ([^,]*)$/, " and $1");
+    tips.push({ cls: "warn", icon: "bulb", text: daylight ? `${wasteful.length} light${wasteful.length > 1 ? "s are" : " is"} on in daylight.` : `${wasteful.length} inside lights are on.`,
+      sub: list, act: { label: `Turn off ${wasteful.length}`, run: () => run("Lights off", "light", "turn_off", {}, { entity_id: wasteful.map((l) => l.id) }) } });
+    say.push(`${wasteful.length} light${wasteful.length > 1 ? "s are" : " is"} on${daylight ? " in daylight" : ""}: ${list}. Turning ${wasteful.length > 1 ? "them" : "it"} off will save energy.`);
+  } else {
+    const onCount = insideOn.length + outsideOn.length;
+    tips.push({ cls: "good", icon: "bulb", text: onCount ? "Your lights look good." : "All lights are off.", sub: onCount ? `${onCount} on right now.` : "" });
+    say.push(onCount ? "Your lights look good." : "All the lights are off.");
+  }
+
+  // Safety check
+  const issues = [];
+  CONFIG.locks.forEach((d) => { const st = entities[d.id]?.state; if (st && st !== "locked") issues.push(`${d.label} is ${st === "jammed" ? "jammed" : "unlocked"}`); });
+  CONFIG.sensors.forEach((s) => {
+    const e = entities[s.id]; if (!e) return;
+    const motion = e.attributes?.device_class === "motion" || s.id.includes("motion");
+    if (!motion && (e.state === "on" || e.state === "open")) issues.push(`${s.label} is open`);
+  });
+  CONFIG.leaks.forEach((d) => { if (entities[d.id]?.state === "on") issues.unshift(`${d.label} is wet`); });
+  CONFIG.smoke.forEach((d) => { if (entities[d.id]?.state === "on") issues.unshift(`${d.label} is going off`); });
+  const ast = entities[CONFIG.alarm]?.state;
+  if (ast === "triggered") issues.unshift("The alarm is going off");
+  const unlocked = CONFIG.locks.filter((d) => entities[d.id]?.state === "unlocked").map((d) => d.id);
+  if (!issues.length) {
+    const armed = (ast || "").startsWith("armed");
+    tips.push({ cls: "good", icon: "shield", text: "Every door is locked and closed. Everything is safe.",
+      sub: armed ? "The alarm is on." : "The alarm is off." });
+    say.push(`Every door is locked and closed. Everything is safe.${armed ? " The alarm is on." : ""}`);
+  } else {
+    tips.push({ cls: "bad", icon: "alert", text: issues[0] + ".", sub: issues.slice(1).join(". "),
+      act: unlocked.length ? { label: "Lock all", run: () => run("Locking all doors", "lock", "lock", {}, { entity_id: unlocked }) } : null });
+    const spoken = issues.map((x) => /^The /.test(x) ? x : "The " + x.charAt(0).toLowerCase() + x.slice(1));
+    say.push(`Heads up. ${spoken.join(". ")}.${unlocked.length ? " You can lock it from the app." : ""}`);
+  }
+
+  // Draw
+  $("tips").innerHTML = tips.map((t, i) =>
+    `<li class="${t.cls}"><span class="ic">${ICONS[t.icon]}</span><span class="tx">${escapeHtml(t.text)}${t.sub ? `<small>${escapeHtml(t.sub)}</small>` : ""}</span>${t.act ? `<button class="act" data-tip="${i}">${escapeHtml(t.act.label)}</button>` : "<span></span>"}</li>`).join("");
+  $("tips").querySelectorAll("[data-tip]").forEach((b) => b.onclick = async () => { b.disabled = true; await tips[b.dataset.tip].act.run(); });
+
+  spokenText = say.join(" ");
+  if (opening && prefs.get("autoSpeak", true)) speak(true);
+}
+
+/* ---------------- talking ---------------- */
+function speak(auto) {
+  const synth = window.speechSynthesis;
+  if (!synth || !spokenText) { if (!auto) toast("This phone can't read text out loud."); return; }
+  if (synth.speaking) { synth.cancel(); $("speakBtn").classList.remove("talking"); if (!auto) return; }
+  // Phones only allow speech after you've tapped the screen.
+  if (auto && navigator.userActivation && !navigator.userActivation.hasBeenActive) { toast("Tap the speaker to hear your briefing"); return; }
+  const u = new SpeechSynthesisUtterance(spokenText);
+  const voices = synth.getVoices();
+  u.voice = voices.find((v) => /en(-|_)US/i.test(v.lang) && /natural|google|samantha|premium/i.test(v.name)) || voices.find((v) => /^en/i.test(v.lang)) || null;
+  u.rate = 0.98; u.pitch = 1;
+  u.onstart = () => $("speakBtn").classList.add("talking");
+  u.onend = u.onerror = () => $("speakBtn").classList.remove("talking");
+  synth.speak(u);
+}
+$("speakBtn").onclick = () => { unlockAudio(); speak(false); };
+setInterval(() => conn && !document.hidden && buildBriefing(false), 10 * 60e3);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && conn) buildBriefing(true); });
+
+/* ---------------- settings ---------------- */
+const initials = (n) => (n || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+function openSettings() { renderSettings(); $("settings").classList.add("open"); $("settings").setAttribute("aria-hidden", "false"); $("settings").scrollTop = 0; }
+function closeSettings() { $("settings").classList.remove("open"); $("settings").setAttribute("aria-hidden", "true"); }
+$("openSettings").onclick = openSettings;
+$("closeSettings").onclick = closeSettings;
+function renderSettings() {
+  $("mono").textContent = initials(userName);
+  $("pName").textContent = userName || "You";
+  $("pRole").textContent = { admin: "Administrator", member: "Family member", guest: "Guest" }[userRole] || "Member";
+  $("pRole").classList.toggle("member", !userIsAdmin);
+  document.querySelectorAll(".admin-only").forEach((el) => el.style.display = userIsAdmin ? "" : "none");
+
+  // Household from Home Assistant "person" entities, with home/away
+  const people = Object.values(entities).filter((e) => e.entity_id?.startsWith("person."));
+  $("people").innerHTML = people.length ? people.map((p) => {
+    const nm = p.attributes.friendly_name || p.entity_id.slice(7), home = p.state === "home";
+    return `<div class="srow"><span class="avatar">${escapeHtml(initials(nm))}</span><span class="stxt"><b>${escapeHtml(nm)}</b><span>${p.attributes.user_id ? "Can sign in" : "No app access"}</span></span><span class="pill ${home ? "home" : "away"}">${home ? "Home" : "Away"}</span></div>`;
+  }).join("") : `<div class="srow"><span class="stxt"><b>No household members yet</b><span>Add people in Home Assistant to see who is home.</span></span></div>`;
+
+  // Alert switches
+  const defaults = { sound: true, vibrate: true, autoSpeak: true, chimeOff: true };
+  document.querySelectorAll("[data-pref]").forEach((b) => b.setAttribute("aria-checked", prefs.get(b.dataset.pref, defaults[b.dataset.pref])));
+
+  // Night schedule summary
+  const n = CONFIG.night;
+  $("nightSummary").textContent = entities[n.enabled]?.state === "on" ? `Arms every night at ${niceTime(entities[n.armAt]?.state)}` : "Off";
+
+  // Noonlight
+  const nl = entities["switch.noonlight_alarm"];
+  $("nlStatus").innerHTML = nl && nl.state !== "unavailable" ? '<span class="dot ok"></span>Ready' : '<span class="dot off"></span>Not connected';
+
+  // Sensors (with battery if the panel reports it)
+  $("sensorCard").innerHTML = CONFIG.sensors.concat(CONFIG.smoke.map((d) => ({ ...d, kind: "smoke" })), CONFIG.leaks.map((d) => ({ ...d, kind: "leak" }))).map((sn) => {
+    const e = entities[sn.id];
+    const bat = entities[sn.id.replace(/^binary_sensor\./, "sensor.") + "_battery"]?.state;
+    const on = e && (e.state === "on" || e.state === "open");
+    const st = !e || e.state === "unavailable" ? '<span class="dot off"></span>Offline' : on ? '<span class="dot bad"></span>Active' : '<span class="dot ok"></span>Ready';
+    return `<div class="srow"><span class="stxt"><b>${escapeHtml(sn.label)}</b><span>${bat ? "Battery " + bat + "%" : sn.kind === "smoke" ? "Fire" : sn.kind === "leak" ? "Water" : sn.kind === "glass" ? "Glass break" : sn.id.startsWith("cover.") ? "Garage opener" : "Door, window or motion"}</span></span><span class="sval">${st}</span></div>`;
+  }).join("");
+
+  // Connections
+  const ok = (v) => v ? '<span class="dot ok"></span>Connected' : '<span class="dot bad"></span>Not connected';
+  const alarm = entities[CONFIG.alarm];
+  $("connCard").innerHTML = [
+    ["Alarm panel", "Qolsys IQ Panel 2", ok(alarm && alarm.state !== "unavailable")],
+    ["Home Assistant", "Your home hub", ok(!!conn)],
+    ["Weather", "Daily forecast", ok(!!entities[CONFIG.weather])],
+    ...CONFIG.locks.map((d) => [d.label + " lock", d.id === "lock.front_door" ? "Schlage" : "Kwikset", ok(entities[d.id] && entities[d.id].state !== "unavailable")]),
+  ].map(([a, b, c]) => `<div class="srow"><span class="stxt"><b>${a}</b><span>${b}</span></span><span class="sval">${c}</span></div>`).join("");
+}
+document.querySelectorAll("[data-pref]").forEach((b) => b.onclick = () => {
+  const k = b.dataset.pref, v = b.getAttribute("aria-checked") !== "true";
+  prefs.set(k, v); b.setAttribute("aria-checked", v);
+  toast({ sound: "Sound", vibrate: "Vibration", autoSpeak: "Talking briefing", chimeOff: "Door chime" }[k] + (v ? " on" : " off"));
+});
+$("manageUsers").onclick = () => { location.href = (CONFIG.hassUrl || location.origin).replace(/\/$/, "") + "/config/person"; };
+$("manageCodes").onclick = () => toast("Change the alarm code on the panel (Settings > User Management). Door codes are set on the Schlage and Kwikset keypads.");
+$("goNight").onclick = () => { closeSettings(); setTimeout(() => $("nightBlock").scrollIntoView({ behavior: "smooth" }), 350); };
+
+// System test (walk test)
+let walk = null;
+$("startWalk").onclick = () => {
+  if ((entities[CONFIG.alarm]?.state || "").startsWith("armed")) return toast("Turn the alarm off before testing.");
+  walk = new Set(); renderWalk(); $("walk").classList.add("open");
+};
+$("walkDone").onclick = () => {
+  const total = CONFIG.sensors.filter((x) => !x.id.startsWith("cover.")).length;
+  $("walk").classList.remove("open"); toast(walk.size === total ? "Every sensor passed" : `${walk.size} of ${total} sensors tested`); walk = null;
+};
+function renderWalk() {
+  if (!walk) return;
+  const list = CONFIG.sensors.filter((x) => !x.id.startsWith("cover."));
+  list.forEach((x) => { const st = entities[x.id]?.state; if (st === "on" || st === "open") { if (!walk.has(x.id)) { walk.add(x.id); playSound("chime"); buzz(80); } } });
+  $("walkList").innerHTML = list.map((x) => `<div class="wrow ${walk.has(x.id) ? "passed" : ""}" data-id="${x.id}"><span class="ck">✓</span><span class="nm">${escapeHtml(x.label)}</span><small>${walk.has(x.id) ? "Passed" : "Waiting"}</small></div>`).join("");
+  $("walkBar").style.width = (walk.size / list.length * 100) + "%";
+  $("walkCount").textContent = `${walk.size} of ${list.length} sensors tested`;
+}
+
+/* ---------------- night schedule ---------------- */
+const hm = (v) => (v || "").slice(0, 5);
+function niceTime(v) {
+  if (!v) return "";
+  const [h, m] = v.split(":").map(Number);
+  return `${(h % 12) || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+function renderNight() {
+  const n = CONFIG.night, on = entities[n.enabled]?.state === "on", mOn = entities[n.disarmEnabled]?.state === "on";
+  if (!entities[n.enabled]) { $("nightNote").textContent = "Add the night schedule from home_security.yaml to use this."; return; }
+  $("nightOn").setAttribute("aria-checked", on); $("mornOn").setAttribute("aria-checked", mOn);
+  const armAt = entities[n.armAt]?.state, offAt = entities[n.disarmAt]?.state;
+  if (document.activeElement !== $("nightAt")) $("nightAt").value = hm(armAt);
+  if (document.activeElement !== $("mornAt")) $("mornAt").value = hm(offAt);
+  $("nightAt").disabled = !on; $("mornAt").disabled = !mOn;
+  $("nightNote").textContent = !on ? "The alarm won't arm by itself. Turn this on to arm it every night."
+    : `Every night at ${niceTime(armAt)} the alarm arms in Home mode and every door locks.` +
+      (mOn ? ` It turns off at ${niceTime(offAt)}.` : " You turn it off in the morning with your code.");
+}
+$("nightOn").onclick = () => run("Night schedule " + ($("nightOn").getAttribute("aria-checked") === "true" ? "off" : "on"),
+  "input_boolean", "toggle", {}, { entity_id: CONFIG.night.enabled });
+$("mornOn").onclick = () => run("Morning turn-off " + ($("mornOn").getAttribute("aria-checked") === "true" ? "off" : "on"),
+  "input_boolean", "toggle", {}, { entity_id: CONFIG.night.disarmEnabled });
+$("nightAt").onchange = (e) => e.target.value && run(`Arms at ${niceTime(e.target.value)}`, "input_datetime", "set_datetime",
+  { time: e.target.value + ":00" }, { entity_id: CONFIG.night.armAt });
+$("mornAt").onchange = (e) => e.target.value && run(`Turns off at ${niceTime(e.target.value)}`, "input_datetime", "set_datetime",
+  { time: e.target.value + ":00" }, { entity_id: CONFIG.night.disarmAt });
+
+/* ---------------- climate ---------------- */
+const MODE_NAMES = { heat: "Heat", cool: "Cool", heat_cool: "Auto", auto: "Auto", off: "Off", fan_only: "Fan", dry: "Dry" };
+let pendingTarget = null, sendTimer = 0;
+function climateTargets(e) {
+  const a = e.attributes;
+  if (a.temperature != null) return { single: a.temperature };
+  if (a.target_temp_low != null) return { low: a.target_temp_low, high: a.target_temp_high };
+  return {};
+}
+function renderClimate() {
+  const e = entities[CONFIG.thermostat];
+  if (!e || e.state === "unavailable") {
+    $("tempNow").textContent = "–"; $("climateHow").textContent = "The thermostat isn't responding.";
+    $("tUp").disabled = $("tDown").disabled = true; return;
+  }
+  const a = e.attributes, now = a.current_temperature, t = climateTargets(e);
+  const action = a.hvac_action || "idle";
+  $("thermo").dataset.action = action;
+  $("tempNow").innerHTML = now != null ? `${Math.round(now)}<sup>${CONFIG.tempUnit}</sup>` : "–";
+  const show = pendingTarget ?? t.single;
+  $("tTarget").textContent = e.state === "off" ? "Off" : show != null ? `${Math.round(show)}${CONFIG.tempUnit}` : `${Math.round(t.low)}–${Math.round(t.high)}`;
+  $("tUp").disabled = $("tDown").disabled = e.state === "off";
+  $("climateHow").textContent =
+    e.state === "off" ? "Heating and cooling are off." :
+    action === "heating" ? `Heating to ${Math.round(show ?? t.low)}${CONFIG.tempUnit}` :
+    action === "cooling" ? `Cooling to ${Math.round(show ?? t.high)}${CONFIG.tempUnit}` :
+    "Holding temperature";
+  // arc shows the inside temperature on a 50–90 scale
+  const p = now == null ? 0 : Math.min(1, Math.max(0, (now - 50) / 40));
+  $("thermoArc").setAttribute("stroke-dashoffset", 75 - 75 * p);
+  const modes = (a.hvac_modes || ["heat", "cool", "off"]).filter((m) => MODE_NAMES[m]);
+  if ($("hvacModes").dataset.built !== modes.join()) {
+    $("hvacModes").dataset.built = modes.join();
+    $("hvacModes").innerHTML = modes.map((m) => `<button data-hvac="${m}">${MODE_NAMES[m]}</button>`).join("");
+    $("hvacModes").querySelectorAll("button").forEach((b) => b.onclick = () =>
+      run(`${MODE_NAMES[b.dataset.hvac]} mode on`, "climate", "set_hvac_mode", { hvac_mode: b.dataset.hvac }, { entity_id: CONFIG.thermostat }));
+  }
+  $("hvacModes").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.hvac === e.state));
+}
+function nudge(step) {
+  const e = entities[CONFIG.thermostat]; if (!e) return;
+  const t = climateTargets(e);
+  clearTimeout(sendTimer);
+  if (t.single != null || pendingTarget != null) {
+    pendingTarget = Math.min(90, Math.max(50, (pendingTarget ?? t.single) + step));
+    renderClimate();
+    sendTimer = setTimeout(async () => {
+      const v = pendingTarget;
+      await run(`Set to ${v}${CONFIG.tempUnit}`, "climate", "set_temperature", { temperature: v }, { entity_id: CONFIG.thermostat });
+      pendingTarget = null; renderClimate();
+    }, 700);
+  } else if (t.low != null) {
+    run("Temperature range changed", "climate", "set_temperature",
+      { target_temp_low: t.low + step, target_temp_high: t.high + step }, { entity_id: CONFIG.thermostat });
+  }
+}
+if (CONFIG.thermostat) { $("tUp").onclick = () => nudge(1); $("tDown").onclick = () => nudge(-1); }
+else $("climateBlock").remove();
+
+/* ---------------- cameras ---------------- */
+const base = () => (CONFIG.hassUrl || location.origin).replace(/\/$/, "");
+function snapUrl(e) {
+  const pic = e?.attributes?.entity_picture;
+  if (!pic) return null;
+  if (pic.startsWith("data:")) return pic;
+  return (pic.startsWith("/") ? base() + pic : pic) + (pic.includes("?") ? "&" : "?") + "_=" + Date.now();
+}
+function liveUrl(id, e) {
+  const t = e?.attributes?.access_token;
+  return t ? `${base()}/api/camera_proxy_stream/${id}?token=${t}` : snapUrl(e);
+}
+if (!CONFIG.cameras.length) $("camBlock").remove();
+$("cams").classList.toggle("one", CONFIG.cameras.length === 1);
+$("cams").innerHTML = CONFIG.cameras.map((c, i) =>
+  `<button class="cam" data-cam="${i}" aria-label="Watch ${escapeHtml(c.label)} live">
+     <img alt="" id="cam${i}"><span class="off hidden" id="camOff${i}">Camera offline</span>
+     <span class="lbl">${escapeHtml(c.label)}</span>
+   </button>`).join("");
+function refreshCams() {
+  CONFIG.cameras.forEach((c, i) => {
+    const e = entities[c.id], url = e && e.state !== "unavailable" ? snapUrl(e) : null;
+    $("camOff" + i).classList.toggle("hidden", !!url);
+    if (!url) { $("cam" + i).removeAttribute("src"); return; }
+    const pre = new Image();                       // load first, then swap: no flicker
+    pre.onload = () => ($("cam" + i).src = pre.src);
+    pre.src = url;
+  });
+}
+document.querySelectorAll("[data-cam]").forEach((b) => b.addEventListener("click", () => {
+  const c = CONFIG.cameras[b.dataset.cam], e = entities[c.id];
+  if (!e || e.state === "unavailable") return toast(`${c.label} camera is offline`);
+  $("camName").textContent = c.label;
+  $("camLive").src = liveUrl(c.id, e);
+  $("camDlg").showModal();
+}));
+const closeCam = () => { $("camLive").removeAttribute("src"); $("camDlg").close(); };
+$("camClose").onclick = closeCam;
+$("camDlg").addEventListener("close", () => $("camLive").removeAttribute("src"));
+setInterval(() => conn && !document.hidden && refreshCams(), CONFIG.cameraRefreshMs);
+
+document.querySelectorAll("[data-dispatch]").forEach((btn) => {
+  const kind = btn.dataset.dispatch;
+  btn.addEventListener("click", async () => {
+    const who = { police: "police", fire: "the fire department", medical: "an ambulance" }[kind];
+    const ok = await confirmSheet({ title: `Send ${who}?`, text: "Noonlight will call you to confirm, then send help. If a life is in danger, also call 911.", yes: `Request ${kind === "medical" ? "medical help" : kind}`, icon: ICO_HELP, danger: true });
+    if (ok) run(`Help requested: ${kind}`, "script", "security_dispatch", { service_type: kind });
+  });
+});
+
+/* ---------------- hold-to-confirm ---------------- */
+function holdable(el, action, enabled = () => true) {
+  // Works with fingers (touch), mouse and keyboard. Touch is handled directly so
+  // Android's own long-press (text selection, context menu) can't cancel the hold.
+  let start = 0, raf = 0, x0 = 0, y0 = 0, viaTouch = false;
+  const set = (p) => el.style.setProperty("--p", p);
+  const reset = () => { cancelAnimationFrame(raf); start = 0; set(0); delete el.dataset.holding; };
+  const tick = (t) => {
+    if (!start) return;
+    const p = Math.min(1, (t - start) / CONFIG.holdMs);
+    set(p);
+    if (p >= 1) { reset(); buzz(60); action(); } else raf = requestAnimationFrame(tick);
+  };
+  const begin = (x, y) => { x0 = x; y0 = y; el.dataset.holding = ""; start = performance.now(); raf = requestAnimationFrame(tick); };
+  const end = () => { const short = start && performance.now() - start < 400; reset(); if (short) toast("Keep holding for 2 seconds"); };
+
+  // Touch (phones, Android app)
+  el.addEventListener("touchstart", (e) => {
+    if (el.disabled || !enabled()) return;           // let normal taps through (e.g. tap to lock)
+    e.preventDefault();                              // stops Android long-press from taking over
+    viaTouch = true; const t = e.touches[0]; begin(t.clientX, t.clientY);
+  }, { passive: false });
+  el.addEventListener("touchmove", (e) => {
+    if (!start) return; e.preventDefault();
+    const t = e.touches[0];
+    if (Math.hypot(t.clientX - x0, t.clientY - y0) > 60) reset();   // finger slid far away: cancel
+  }, { passive: false });
+  el.addEventListener("touchend", (e) => { if (start) { e.preventDefault(); end(); } setTimeout(() => (viaTouch = false), 600); }, { passive: false });
+  el.addEventListener("touchcancel", () => { /* Android may send this on long-press; keep holding */ });
+
+  // Mouse / pen (computers)
+  el.addEventListener("pointerdown", (e) => {
+    if (viaTouch || e.pointerType === "touch" || el.disabled || !enabled()) return;
+    e.preventDefault(); el.setPointerCapture?.(e.pointerId); begin(e.clientX, e.clientY);
+  });
+  ["pointerup", "pointercancel"].forEach((ev) => el.addEventListener(ev, (e) => { if (e.pointerType !== "touch" && start && !viaTouch) end(); }));
+  document.addEventListener("touchend", () => { if (start && viaTouch) end(); }, { passive: true });   // finger lifted elsewhere
+
+  // Keyboard: hold Space or Enter
+  el.addEventListener("keydown", (e) => {
+    if ((e.key === " " || e.key === "Enter") && !e.repeat && enabled() && !el.disabled) { e.preventDefault(); begin(0, 0); }
+  });
+  el.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") reset(); });
+  el.addEventListener("contextmenu", (e) => e.preventDefault());
+}
+
+/* ---------------- code keypad ---------------- */
+function askPin(title) {
+  return new Promise((resolve) => {
+    let pin = "";
+    const dlg = $("pinDlg"), dots = $("pinDots");
+    $("pinTitle").textContent = title;
+    const draw = () => {
+      const n = Math.max(4, pin.length);
+      dots.innerHTML = Array.from({ length: n }, (_, i) => `<i class="${i < pin.length ? "on" : ""}"></i>`).join("");
+    };
+    const finish = (v) => { dlg.close(); resolve(v || null); };
+    $("keypad").innerHTML = "";
+    ["1","2","3","4","5","6","7","8","9","Clear","0","Done"].forEach((k) => {
+      const b = document.createElement("button");
+      b.textContent = k;
+      if (k.length > 1) b.className = "soft";
+      b.onclick = () => {
+        if (k === "Clear") pin = "";
+        else if (k === "Done") { if (pin) return finish(pin); dots.classList.remove("shake"); void dots.offsetWidth; dots.classList.add("shake"); }
+        else if (pin.length < 10) pin += k;
+        draw();
+      };
+      $("keypad").appendChild(b);
+    });
+    $("pinCancel").onclick = () => finish(null);
+    dlg.oncancel = () => resolve(null);
+    draw(); dlg.showModal();
+  });
+}
+
+setInterval(() => conn && render(), 30000);
+connect(false);
+$("simBtn").onclick = () => { window.__simulateBreakIn(); toast("Back door to the garage opened. Disarm with 1234, or wait."); window.scrollTo({ top: 0, behavior: "smooth" }); };
+$("leakBtn").onclick = () => { window.__simulateLeak(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+$("doors").insertAdjacentHTML("beforebegin", '<p class="note" style="margin:-4px 0 16px;padding:12px 14px;border-radius:14px;border:1px solid rgba(217,183,126,.3);background:rgba(217,183,126,.07)"><b style="color:var(--porch-hi)">Demo locks.</b> These don’t move your real doors yet. Your Schlage and Kwikset connect once the Home Assistant box is set up.</p>');
+$("walk").querySelector(".note").textContent = "Demo: your real doors aren't connected yet. Tap each sensor below to pretend it was opened. In the real app, this ticks off on its own as you walk around.";
+$("walkList").addEventListener("click", (e) => { const r = e.target.closest("[data-id]"); if (r) window.__openDoor(r.dataset.id); });
+$("fireBtn").onclick = () => { window.__simulateFire(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+document.querySelectorAll("[data-wx]").forEach((b) => b.onclick = () => window.__setWeather(b.dataset.wx));
+</script>
+<script>
+  if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>
