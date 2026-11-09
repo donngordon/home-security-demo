@@ -384,6 +384,11 @@
   #login .brand-top { display: block; font: 600 14px var(--ui); letter-spacing: .32em; text-transform: uppercase; color: var(--porch);
     margin-bottom: 10px; }
   #login p { color: var(--haze); margin: 12px auto 30px; max-width: 30ch; }
+  .brandlogo { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-bottom: 4px; }
+  .brandlogo .gmark { width: 96px; height: 96px; filter: drop-shadow(0 0 16px rgba(240,200,120,.4)); }
+  .brandlogo .gname { font-family: var(--display); font-weight: 700; font-size: 50px; line-height: 1; letter-spacing: .5px;
+    background: linear-gradient(180deg, #f8e7bd, #e7c074 45%, #c99a44); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .brandlogo .gsub { font-family: var(--ui); font-weight: 600; font-size: 15px; letter-spacing: 7px; color: #caa968; padding-left: 7px; margin-top: 3px; }
   .cta { display: block; width: 100%; padding: 18px; border-radius: 18px; color: #1d160a; font-weight: 700; font-size: 17px;
     background: linear-gradient(180deg, var(--porch-hi), var(--porch)); letter-spacing: .01em;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 14px 30px -12px rgba(217,183,126,.6); }
@@ -464,15 +469,18 @@
 <main>
   <!-- ======================= LOGIN ======================= -->
   <section id="login">
-    <svg viewBox="0 0 190 150" aria-hidden="true">
-      <circle class="porch-light" cx="95" cy="112" r="48" fill="#d9b77e" opacity=".22"/>
-      <path d="M20 70 L95 14 L170 70 V140 H20 Z" fill="#161e33" stroke="#98a1ba" stroke-width="2" stroke-linejoin="round"/>
-      <rect x="80" y="96" width="30" height="44" rx="3" fill="#0d1322" stroke="#d9b77e" stroke-width="3"/>
-      <circle cx="103" cy="120" r="2.5" fill="#d9b77e"/>
-      <rect x="38" y="84" width="26" height="22" rx="2" fill="#0d1322" stroke="#98a1ba" stroke-width="2"/>
-      <rect x="126" y="84" width="26" height="22" rx="2" fill="#0d1322" stroke="#98a1ba" stroke-width="2"/>
-    </svg>
-    <h1><span class="brand-top">Gordon</span>Home Security</h1>
+    <div class="brandlogo">
+      <svg class="gmark porch-light" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+        <defs><linearGradient id="gpg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f7e3b4"/><stop offset=".5" stop-color="#e6ba6a"/><stop offset="1" stop-color="#c7983f"/>
+        </linearGradient></defs>
+        <circle cx="50" cy="50" r="47" stroke="url(#gpg)" stroke-width="0.8" opacity=".35"/>
+        <path d="M24 85 V41 L50 16 L76 41 V85 Z" stroke="url(#gpg)" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <text x="50" y="70" text-anchor="middle" font-family="'Instrument Serif', Georgia, serif" font-weight="700" font-size="46" fill="url(#gpg)">G</text>
+      </svg>
+      <div class="gname">Gordon</div>
+      <div class="gsub">PROTECTION</div>
+    </div>
     <p>Sign in to watch and control your home.</p>
     <form id="loginForm" autocomplete="off">
       <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" aria-label="Username" autocapitalize="none" spellcheck="false">
