@@ -1115,12 +1115,36 @@ $("loginForm").addEventListener("submit", (e) => {
   if (!a || a.pw !== p) { $("loginMsg").textContent = "Wrong username or password."; return; }
   demoUser = { name: a.name, is_admin: a.role === "admin", role: a.role };
   $("loginMsg").textContent = ""; connect(true);
+  if (window.__gpStartSession) window.__gpStartSession();
 });
 document.querySelectorAll(".demoaccts .acct").forEach((b) => b.onclick = () => {
   const a = ACCOUNTS[b.dataset.acct]; if (!a) return;
   $("username").value = b.dataset.acct; $("password").value = a.pw; $("loginMsg").textContent = "";
 });
-$("logoutBtn").onclick = () => { store.save(null); location.reload(); };
+$("logoutBtn").onclick = () => { if (window.__gpStopSession) window.__gpStopSession(); store.save(null); location.reload(); };
+
+/* ---------- NIST SP 800-63B session timeout (idle + absolute) ----------
+   AAL2-aligned: 15-min inactivity (NIST max 30), 1-min warning, 12-h cap.
+   NOTE: client-side only — in production the SERVER must enforce these and
+   invalidate the session token. This mirrors that behavior for the UX. */
+(function(){
+  var IDLE_TIMEOUT=15*60*1000, WARN_BEFORE=60*1000, ABSOLUTE_TIMEOUT=12*60*60*1000;
+  var idleT=null, warnT=null, absT=null, cdT=null, last=0, active=false;
+  var EV=["mousemove","mousedown","keydown","scroll","touchstart","click"];
+  var bar=document.createElement("div"); bar.id="sessWarn";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:9999;display:none;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:12px 16px;background:linear-gradient(180deg,#241d0c,#17120a);border-bottom:1px solid var(--hair,rgba(240,200,120,.2));font:600 14px var(--ui,sans-serif);color:#f3efe6;box-shadow:0 12px 30px -14px rgba(0,0,0,.7)";
+  bar.innerHTML='<span>For your security, you’ll be signed out in <b id="swC">60</b>s.</span><button id="swStay" style="padding:8px 16px;border:none;border-radius:999px;font:700 13px var(--ui,sans-serif);cursor:pointer;background:linear-gradient(180deg,#f7e3b4,#c7983f);color:#2a1e06">Stay signed in</button><button id="swOut" style="padding:8px 16px;border-radius:999px;font:700 13px var(--ui,sans-serif);cursor:pointer;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#f3efe6">Sign out</button>';
+  document.body.appendChild(bar);
+  function clearAll(){ if(idleT)clearTimeout(idleT); if(warnT)clearTimeout(warnT); if(absT)clearTimeout(absT); if(cdT)clearInterval(cdT); idleT=warnT=absT=cdT=null; }
+  function hide(){ bar.style.display="none"; }
+  function showWarn(){ bar.style.display="flex"; var n=Math.round(WARN_BEFORE/1000); document.getElementById("swC").textContent=n; cdT=setInterval(function(){ n--; var e=document.getElementById("swC"); if(e)e.textContent=Math.max(n,0); if(n<=0&&cdT){clearInterval(cdT);cdT=null;} },1000); warnT=setTimeout(function(){ endSession("idle"); }, WARN_BEFORE); }
+  function reset(){ if(!active)return; var now=Date.now(); if(now-last<1000)return; last=now; hide(); if(idleT)clearTimeout(idleT); if(warnT){clearTimeout(warnT);warnT=null;} if(cdT){clearInterval(cdT);cdT=null;} idleT=setTimeout(showWarn, IDLE_TIMEOUT-WARN_BEFORE); }
+  function endSession(reason){ clearAll(); hide(); active=false; EV.forEach(function(ev){window.removeEventListener(ev,reset);}); try{ sessionStorage.setItem("gp_timeout",reason); }catch(e){} try{ store.save(null); }catch(e){} location.reload(); }
+  window.__gpStartSession=function(){ if(active)return; active=true; EV.forEach(function(ev){window.addEventListener(ev,reset,{passive:true});}); last=0; reset(); absT=setTimeout(function(){ endSession("absolute"); }, ABSOLUTE_TIMEOUT); };
+  window.__gpStopSession=function(){ clearAll(); hide(); active=false; EV.forEach(function(ev){window.removeEventListener(ev,reset);}); };
+  bar.addEventListener("click",function(e){ if(e.target.id==="swStay"){ last=0; reset(); } else if(e.target.id==="swOut"){ endSession("manual"); } });
+  try{ var r=sessionStorage.getItem("gp_timeout"); if(r){ sessionStorage.removeItem("gp_timeout"); var m=document.getElementById("loginMsg"); if(m){ m.textContent = r==="idle" ? "You were signed out after 15 minutes of inactivity. Please sign in again." : r==="absolute" ? "Your session reached its 12-hour limit. Please sign in again." : ""; } } }catch(e){}
+})();
 
 function greeting() {
   const h = new Date().getHours();
