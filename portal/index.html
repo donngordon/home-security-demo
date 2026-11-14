@@ -241,17 +241,88 @@
   var login=document.getElementById('login'), portal=document.getElementById('portal');
   var form=document.getElementById('loginForm'), err=document.getElementById('loginerr');
 
+  // ============================================================
+  //  SESSION MANAGEMENT — aligned to NIST SP 800-63B (AAL2):
+  //  reauthenticate after inactivity and a 12-hour absolute cap.
+  //  NIST AAL2 allows up to 30 min inactivity; we use 15 min (stricter)
+  //  with a 1-minute warning. In production these timers MUST also be
+  //  enforced on the server and the session token invalidated — this
+  //  client logic mirrors that behavior.
+  var IDLE_TIMEOUT     = 15 * 60 * 1000;      // 15 min inactivity (NIST AAL2 max 30 min)
+  var WARN_BEFORE      = 60 * 1000;           // warn 60s before idle sign-out
+  var ABSOLUTE_TIMEOUT = 12 * 60 * 60 * 1000; // 12 h hard cap (NIST AAL2)
+  // ============================================================
+  var idleTimer=null, warnTimer=null, absTimer=null, countdownTimer=null, lastReset=0;
+  var ACT_EVENTS=["mousemove","mousedown","keydown","scroll","touchstart","click"];
+
+  var warnBar=document.createElement('div');
+  warnBar.id='sessionWarn';
+  warnBar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:80;display:none;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;'+
+    'padding:12px 18px;background:linear-gradient(180deg,#241d0c,#17120a);border-bottom:1px solid var(--hair);'+
+    'font-size:14px;color:var(--ink);box-shadow:0 12px 30px -14px rgba(0,0,0,.7)';
+  warnBar.innerHTML='<span>For your security, you’ll be signed out in <b id="swCount">60</b>s.</span>'+
+    '<button class="btn btn-gold" id="swStay" style="padding:8px 16px">Stay signed in</button>'+
+    '<button class="btn btn-ghost" id="swOut" style="padding:8px 16px">Sign out</button>';
+  document.body.appendChild(warnBar);
+
+  function clearTimers(){
+    if(idleTimer) clearTimeout(idleTimer);
+    if(warnTimer) clearTimeout(warnTimer);
+    if(absTimer) clearTimeout(absTimer);
+    if(countdownTimer) clearInterval(countdownTimer);
+    idleTimer=warnTimer=absTimer=countdownTimer=null;
+  }
+  function hideWarn(){ warnBar.style.display='none'; }
+  function showWarn(){
+    warnBar.style.display='flex';
+    var left=Math.round(WARN_BEFORE/1000);
+    document.getElementById('swCount').textContent=left;
+    countdownTimer=setInterval(function(){ left--; var el=document.getElementById('swCount'); if(el) el.textContent=Math.max(left,0); if(left<=0 && countdownTimer){ clearInterval(countdownTimer); countdownTimer=null; } },1000);
+    warnTimer=setTimeout(function(){ signOut('idle'); }, WARN_BEFORE);
+  }
+  function resetIdle(){
+    var now=Date.now();
+    if(now-lastReset < 1000) return; // throttle
+    lastReset=now;
+    hideWarn();
+    if(idleTimer) clearTimeout(idleTimer);
+    if(warnTimer){ clearTimeout(warnTimer); warnTimer=null; }
+    if(countdownTimer){ clearInterval(countdownTimer); countdownTimer=null; }
+    idleTimer=setTimeout(showWarn, IDLE_TIMEOUT - WARN_BEFORE);
+  }
+  function bindActivity(on){
+    ACT_EVENTS.forEach(function(ev){ if(on){ window.addEventListener(ev,resetIdle,{passive:true}); } else { window.removeEventListener(ev,resetIdle,{passive:true}); } });
+  }
+  function startSession(){
+    bindActivity(true);
+    lastReset=0; resetIdle();
+    absTimer=setTimeout(function(){ signOut('absolute'); }, ABSOLUTE_TIMEOUT);
+  }
+  function signIn(){
+    err.textContent=""; login.style.display="none"; portal.style.display="flex"; window.scrollTo(0,0);
+    startSession();
+  }
+  function signOut(reason){
+    clearTimers(); hideWarn(); bindActivity(false);
+    portal.style.display="none"; login.style.display="flex";
+    document.getElementById('password').value="";
+    if(reason==='idle'){ err.style.color='var(--gold)'; err.textContent="You were signed out after 15 minutes of inactivity. Please sign in again."; }
+    else if(reason==='absolute'){ err.style.color='var(--gold)'; err.textContent="Your session reached its 12-hour limit. Please sign in again."; }
+    else { err.style.color='#ff9b8a'; err.textContent=""; }
+    window.scrollTo(0,0);
+  }
+
   form.addEventListener('submit',function(e){
     e.preventDefault();
     var em=document.getElementById('email').value.trim().toLowerCase();
     var pw=document.getElementById('password').value;
-    if(em===ACCOUNT.email && pw===ACCOUNT.pw){
-      err.textContent=""; login.style.display="none"; portal.style.display="flex"; window.scrollTo(0,0);
-    } else { err.textContent="That email or password doesn't match our demo login."; }
+    if(em===ACCOUNT.email && pw===ACCOUNT.pw){ signIn(); }
+    else { err.style.color='#ff9b8a'; err.textContent="That email or password doesn't match our demo login."; }
   });
-  document.getElementById('signout').addEventListener('click',function(){
-    portal.style.display="none"; login.style.display="flex";
-    document.getElementById('password').value=""; window.scrollTo(0,0);
+  document.getElementById('signout').addEventListener('click',function(){ signOut('manual'); });
+  warnBar.addEventListener('click',function(e){
+    if(e.target.id==='swStay'){ lastReset=0; resetIdle(); }
+    else if(e.target.id==='swOut'){ signOut('manual'); }
   });
 
   // ---- pay flow (secure-checkout hand-off, demo) ----
