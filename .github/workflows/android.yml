@@ -37,7 +37,7 @@ jobs:
           cp android/app/build/outputs/apk/debug/app-debug.apk GordonHomeSecurity.apk
 
       - name: Publish as a download
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: app-v1.0.${{ github.run_number }}
           name: Gordon Home Security ${{ github.run_number }}
