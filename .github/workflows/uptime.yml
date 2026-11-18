@@ -34,13 +34,12 @@ jobs:
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
+          BAD: ${{ steps.ping.outputs.bad }}
         run: |
           existing=$(gh issue list --state open --search "Hosted site appears DOWN in:title" --json number -q 'length')
           if [ "$existing" = "0" ]; then
-            gh issue create --title "⚠️ Hosted site appears DOWN" \
-              --body "The uptime monitor failed:${{ steps.ping.outputs.bad }}
-
-Check **Settings → Pages** and the live URLs. This issue will auto-close when the site is back up."
+            body="The uptime monitor could not reach:${BAD}. Check Settings -> Pages and the live URLs. This issue auto-closes when the site is back up."
+            gh issue create --title "Hosted site appears DOWN" --body "$body"
           fi
       - name: Close issue if back up
         if: success()
@@ -48,6 +47,6 @@ Check **Settings → Pages** and the live URLs. This issue will auto-close when 
           GH_TOKEN: ${{ github.token }}
         run: |
           for n in $(gh issue list --state open --search "Hosted site appears DOWN in:title" --json number -q '.[].number'); do
-            gh issue comment "$n" --body "✅ Back up — all sites responding."
+            gh issue comment "$n" --body "Back up - all sites responding."
             gh issue close "$n"
           done
