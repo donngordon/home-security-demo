@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<title>Gordon Protection — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f1e;--panel:#0e1530;--card:#101a34;--ink:#f3efe6;--muted:#9aabc6;--muted2:#6f7e9b;
+    --g1:#f7e3b4;--g2:#e6ba6a;--g3:#c7983f;--gold:#e6ba6a;
+    --hair:rgba(240,200,120,.16);--hair2:rgba(255,255,255,.08);--glass:rgba(255,255,255,.04);
+    --good:#7ee0a8;--warn:#e6ba6a;--bad:#ff9b8a;
+    --display:'Instrument Serif',Georgia,serif;--ui:'Plus Jakarta Sans',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--ui);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(90% 60% at 85% -5%,rgba(230,186,106,.1),transparent 55%),radial-gradient(70% 50% at 5% 10%,rgba(90,140,200,.1),transparent 55%),var(--bg);min-height:100vh}
+  a{color:inherit;text-decoration:none}
+  .gold{background:linear-gradient(180deg,var(--g1),var(--g2) 50%,var(--g3));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .btn{font-family:var(--ui);font-weight:600;font-size:14.5px;cursor:pointer;border:none;border-radius:999px;padding:12px 20px;transition:transform .2s,box-shadow .3s,background .2s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+  .btn-gold{background:linear-gradient(180deg,var(--g1),var(--g2) 55%,var(--g3));color:#2a1e06;box-shadow:0 8px 24px -10px rgba(230,186,106,.6)}
+  .btn-ghost{background:var(--glass);border:1px solid var(--hair);color:var(--ink)}
+  .btn-ghost:hover{background:rgba(255,255,255,.07)}
+  .btn-sm{padding:8px 14px;font-size:13px}
+  input,select{width:100%;font-family:var(--ui);font-size:15px;color:var(--ink);background:rgba(255,255,255,.04);border:1px solid var(--hair2);border-radius:12px;padding:12px 14px}
+  input:focus,select:focus{outline:none;border-color:var(--gold);background:rgba(255,255,255,.06)}
+  select option{background:#0e1530}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500}
+  .field{margin-bottom:13px;text-align:left}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand svg{width:30px;height:30px;filter:drop-shadow(0 0 10px rgba(240,200,120,.35))}
+  .brand .bt{font-family:var(--display);font-size:20px;line-height:1}
+  .brand .bs{font-size:8.5px;letter-spacing:4px;color:var(--gold);font-weight:600;margin-top:2px}
+  .brand .bcol{display:flex;flex-direction:column}
+  .tag{font-size:10px;letter-spacing:2px;color:var(--gold);border:1px solid var(--hair);border-radius:999px;padding:3px 9px;font-weight:700}
+
+  /* LOGIN */
+  #login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:22px}
+  .loginbox{width:100%;max-width:390px;text-align:center}
+  .loginbox .brand{justify-content:center;margin-bottom:22px}
+  .loginbox h1{font-family:var(--display);font-weight:400;font-size:30px;margin-bottom:6px}
+  .loginbox p.sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+  #login .btn-gold{width:100%;margin-top:6px}
+  .err{color:var(--bad);font-size:13px;margin-top:12px;min-height:16px}
+
+  /* APP */
+  #app{display:none;min-height:100vh;flex-direction:column}
+  .top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--hair2);background:rgba(10,15,30,.86);backdrop-filter:blur(14px)}
+  .top .r{display:flex;align-items:center;gap:10px}
+  .who{font-size:12.5px;color:var(--muted);text-align:right;line-height:1.3}
+  .who b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1000px;margin:0 auto;padding:20px 16px 90px;width:100%}
+  h2.sec{font-family:var(--display);font-size:24px;font-weight:400;margin:6px 2px 14px}
+
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+  .tile{border:1px solid var(--hair2);border-radius:16px;padding:16px;background:linear-gradient(180deg,var(--glass),rgba(255,255,255,0))}
+  .tile .n{font-family:var(--display);font-size:30px;line-height:1}
+  .tile .l{font-size:11.5px;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-top:6px}
+  .tile.mrr .n{color:var(--gold)}
+
+  .toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .toolbar input{flex:1;min-width:180px}
+
+  .clist{display:flex;flex-direction:column;gap:10px}
+  .crow{display:flex;align-items:center;gap:13px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px;background:linear-gradient(180deg,var(--glass),rgba(255,255,255,0));cursor:pointer;transition:border-color .2s,background .2s}
+  .crow:hover{border-color:var(--hair);background:rgba(255,255,255,.05)}
+  .crow .av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-size:16px;flex:none;background:#0c1326;border:1px solid rgba(240,200,120,.4)}
+  .crow .ci{flex:1;min-width:0}
+  .crow .cn{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crow .ce{font-size:12.5px;color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crow .cp{text-align:right;flex:none}
+  .crow .cpl{font-size:13.5px;font-weight:600}
+  .crow .cpp{font-size:12px;color:var(--muted)}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.3px;margin-top:4px}
+  .b-active{background:rgba(126,224,168,.14);color:var(--good)}
+  .b-pending{background:rgba(230,186,106,.14);color:var(--warn)}
+  .b-past_due{background:rgba(255,155,138,.16);color:var(--bad)}
+  .b-suspended{background:rgba(255,155,138,.16);color:var(--bad)}
+  .b-cancelled{background:rgba(155,170,198,.14);color:var(--muted)}
+  .empty{color:var(--muted2);text-align:center;padding:40px 10px;font-size:14px}
+
+  /* DETAIL SHEET */
+  .sheet{position:fixed;inset:0;z-index:60;display:none;justify-content:flex-end;background:rgba(5,8,16,.6);backdrop-filter:blur(5px)}
+  .sheet.show{display:flex}
+  .spanel{width:100%;max-width:440px;height:100%;overflow-y:auto;background:linear-gradient(180deg,#101a34,#0b1125);border-left:1px solid var(--hair);padding:22px 20px 60px}
+  .spanel .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .spanel .sh h3{font-family:var(--display);font-size:24px;font-weight:400}
+  .x{cursor:pointer;color:var(--muted);font-size:24px;line-height:1;padding:4px 8px}
+  .ssub{font-size:13px;color:var(--muted2);margin:-12px 0 20px}
+  .block{border-top:1px solid var(--hair2);padding-top:16px;margin-top:16px}
+  .block .bt2{font-size:11.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted2);font-weight:700;margin-bottom:12px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .savebar{display:flex;gap:10px;margin-top:8px}
+  .savebar .btn{flex:1}
+  .msg{font-size:12.5px;margin-top:8px;min-height:15px}
+  .dlist{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .drow{display:flex;align-items:center;gap:10px;font-size:13.5px;border:1px solid var(--hair2);border-radius:10px;padding:9px 11px}
+  .drow .dn{flex:1}
+  .ddot{width:8px;height:8px;border-radius:50%;flex:none}
+  .danger{color:var(--bad);border-color:rgba(255,155,138,.3)}
+
+  /* MODAL */
+  .modal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(5,8,16,.72);backdrop-filter:blur(6px)}
+  .modal.show{display:flex}
+  .mbox{width:100%;max-width:400px;border:1px solid var(--hair);border-radius:20px;padding:28px 24px;text-align:center;background:linear-gradient(180deg,#101a34,#0c1326);box-shadow:0 40px 90px -30px rgba(0,0,0,.8)}
+  .mbox .btn-gold{width:100%}
+  .mlink{display:inline-block;margin-top:14px;color:var(--muted);font-size:13px;cursor:pointer}
+  .spin{width:38px;height:38px;border-radius:50%;border:3px solid rgba(240,200,120,.25);border-top-color:var(--gold);margin:6px auto 16px;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .okmark{width:56px;height:56px;border-radius:50%;margin:2px auto 14px;display:grid;place-items:center;background:linear-gradient(180deg,var(--g1),var(--g3))}
+  .okmark svg{width:28px;height:28px;color:#2a1e06}
+  .setup{margin-top:18px;font-size:12.5px;color:var(--muted2);border:1px dashed var(--hair);border-radius:12px;padding:12px}
+
+  @media(max-width:620px){ .tiles{grid-template-columns:1fr 1fr} h2.sec{font-size:21px} }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute"><defs><linearGradient id="gpg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7e3b4"/><stop offset=".5" stop-color="#e6ba6a"/><stop offset="1" stop-color="#c7983f"/></linearGradient></defs></svg>
+
+<!-- LOGIN -->
+<section id="login">
+  <div class="loginbox">
+    <a class="brand">
+      <svg viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="47" stroke="url(#gpg)" stroke-width="0.8" opacity=".35"/><path d="M24 85 V41 L50 16 L76 41 V85 Z" stroke="url(#gpg)" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round"/><text x="50" y="70" text-anchor="middle" font-family="'Instrument Serif',Georgia,serif" font-weight="700" font-size="46" fill="url(#gpg)">G</text></svg>
+      <span class="bcol"><span class="bt">Gordon</span><span class="bs">PROTECTION</span></span>
+    </a>
+    <h1>Admin Console</h1>
+    <p class="sub">Sign in to manage customers, plans and billing.</p>
+    <form id="loginForm">
+      <div class="field"><label>Email</label><input type="email" id="email" placeholder="you@email.com" autocomplete="username"></div>
+      <div class="field"><label>Password</label><input type="password" id="password" placeholder="••••••••" autocomplete="current-password"></div>
+      <button type="submit" class="btn btn-gold" id="authBtn">Sign in</button>
+      <div class="err" id="loginerr"></div>
+    </form>
+    <form id="mfaForm" style="display:none">
+      <div class="field"><label>Authenticator code</label><input type="text" id="mfaCode" inputmode="numeric" maxlength="6" placeholder="6-digit code" autocomplete="one-time-code"></div>
+      <button type="submit" class="btn btn-gold">Verify &amp; continue</button>
+      <div class="err" id="mfaErr"></div>
+    </form>
+    <div class="setup" id="setupHint" style="display:none">Connect your Supabase project to enable sign-in — see <b>SUPABASE_SETUP.md</b>.</div>
+  </div>
+</section>
+
+<!-- APP -->
+<section id="app">
+  <div class="top">
+    <a class="brand">
+      <svg viewBox="0 0 100 100" fill="none"><path d="M24 85 V41 L50 16 L76 41 V85 Z" stroke="url(#gpg)" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round"/><text x="50" y="70" text-anchor="middle" font-family="'Instrument Serif',Georgia,serif" font-weight="700" font-size="46" fill="url(#gpg)">G</text></svg>
+      <span class="bcol"><span class="bt">Gordon</span><span class="bs">PROTECTION</span></span>
+    </a>
+    <div class="r">
+      <div class="who">Signed in as<br><b id="adminEmail">—</b></div>
+      <span class="tag" style="cursor:pointer" id="secBtn">2FA</span>
+      <button class="btn btn-ghost btn-sm" id="signout">Sign out</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <h2 class="sec">Overview</h2>
+    <div class="tiles">
+      <div class="tile"><div class="n" id="tTotal">0</div><div class="l">Customers</div></div>
+      <div class="tile"><div class="n" id="tActive">0</div><div class="l">Active</div></div>
+      <div class="tile"><div class="n" id="tDue">0</div><div class="l">Past due</div></div>
+      <div class="tile mrr"><div class="n" id="tMrr">$0</div><div class="l">Monthly revenue</div></div>
+    </div>
+
+    <h2 class="sec">Customers</h2>
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="Search name or email…">
+      <button class="btn btn-ghost btn-sm" id="refresh">Refresh</button>
+    </div>
+    <div class="clist" id="clist"><div class="empty">Loading…</div></div>
+  </div>
+</section>
+
+<!-- CUSTOMER DETAIL SHEET -->
+<div class="sheet" id="sheet">
+  <div class="spanel" id="spanel"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ============================================================
+  //  CONNECT YOUR BACKEND — same two values as the portal
+  //  (Supabase Dashboard -> Project Settings -> API).
+  // ============================================================
+  window.GP_SUPABASE_URL      = "";
+  window.GP_SUPABASE_ANON_KEY = "";
+</script>
+<script>
+(function(){
+  "use strict";
+  var sb=null;
+  if(window.GP_SUPABASE_URL && window.GP_SUPABASE_ANON_KEY && window.supabase){
+    sb=window.supabase.createClient(window.GP_SUPABASE_URL,window.GP_SUPABASE_ANON_KEY);
+  }
+  var $=function(id){return document.getElementById(id);};
+  var login=$('login'), app=$('app'), form=$('loginForm'), mfaForm=$('mfaForm'), err=$('loginerr');
+  var customers=[], pendingFactorId=null, pendingChallengeId=null;
+
+  function money(n){return "$"+Number(n||0).toFixed(2);}
+  function money0(n){return "$"+Math.round(Number(n||0)).toLocaleString();}
+  function dcap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
+  function esc(s){return (s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function fmtDate(d){ if(!d)return'—'; try{return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch(e){return d;} }
+  function initials(name,email){var s=(name||'').trim(); if(s){var p=s.split(/\s+/);return (p[0][0]+(p[1]?p[1][0]:'')).toUpperCase();} return (email||'?').slice(0,2).toUpperCase();}
+  function statusLabel(s){return s==='past_due'?'Past due':dcap(s||'');}
+
+  if(!sb){ $('setupHint').style.display='block'; }
+
+  // ---------- session timeout (NIST AAL2) ----------
+  var IDLE=15*60*1000, WARN=60*1000, ABS=12*60*60*1000;
+  var it=null,wt=null,at=null,ct=null,lr=0, EVTS=["mousemove","mousedown","keydown","scroll","touchstart","click"];
+  var bar=document.createElement('div');
+  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:90;display:none;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:12px;background:linear-gradient(180deg,#241d0c,#17120a);border-bottom:1px solid var(--hair);font-size:14px;color:var(--ink)';
+  bar.innerHTML='<span>Signing out in <b id="cw">60</b>s for your security.</span><button class="btn btn-gold btn-sm" id="stay">Stay signed in</button>';
+  document.body.appendChild(bar);
+  function clr(){[it,wt,at].forEach(function(t){if(t)clearTimeout(t);}); if(ct)clearInterval(ct); it=wt=at=ct=null;}
+  function hide(){bar.style.display='none';}
+  function warn(){ bar.style.display='flex'; var l=60; $('cw').textContent=l; ct=setInterval(function(){l--;var e=$('cw');if(e)e.textContent=Math.max(l,0);if(l<=0&&ct){clearInterval(ct);ct=null;}},1000); wt=setTimeout(function(){out('idle');},WARN); }
+  function reset(){var n=Date.now();if(n-lr<1000)return;lr=n;hide();if(it)clearTimeout(it);if(wt){clearTimeout(wt);wt=null;}if(ct){clearInterval(ct);ct=null;}it=setTimeout(warn,IDLE-WARN);}
+  function bindAct(on){EVTS.forEach(function(ev){on?window.addEventListener(ev,reset,{passive:true}):window.removeEventListener(ev,reset,{passive:true});});}
+  function startSession(){bindAct(true);lr=0;reset();at=setTimeout(function(){out('absolute');},ABS);}
+  bar.addEventListener('click',function(e){if(e.target.id==='stay'){lr=0;reset();}});
+
+  function showLogin(msg,gold){ clr();hide();bindAct(false); app.style.display='none'; login.style.display='flex'; mfaForm.style.display='none'; form.style.display='block'; $('password').value=''; if($('mfaCode'))$('mfaCode').value=''; if(msg){err.style.color=gold?'var(--gold)':'var(--bad)';err.textContent=msg;} window.scrollTo(0,0); }
+  function enterApp(email){ err.textContent=''; login.style.display='none'; app.style.display='flex'; $('adminEmail').textContent=email; startSession(); loadCustomers(); }
+
+  // ---------- sign in + admin check + MFA ----------
+  function afterAuth(){
+    sb.auth.mfa.getAuthenticatorAssuranceLevel().then(function(a){
+      var d=a.data||{};
+      if(d.nextLevel==='aal2'&&d.currentLevel==='aal1'){
+        sb.auth.mfa.listFactors().then(function(f){
+          var t=(f.data&&f.data.totp&&f.data.totp[0]); if(!t){verifyAdmin();return;}
+          pendingFactorId=t.id;
+          sb.auth.mfa.challenge({factorId:t.id}).then(function(c){ if(c.error){showLogin(c.error.message);return;} pendingChallengeId=c.data.id; form.style.display='none'; mfaForm.style.display='block'; $('mfaCode').focus(); });
+        });
+      } else { verifyAdmin(); }
+    });
+  }
+  function verifyAdmin(){
+    sb.auth.getUser().then(function(r){
+      var u=r.data&&r.data.user; if(!u){showLogin();return;}
+      sb.from('profiles').select('role').eq('id',u.id).single().then(function(pr){
+        if(pr.data && pr.data.role==='admin'){ enterApp(u.email); }
+        else { sb.auth.signOut(); showLogin('This account is not an administrator.'); }
+      });
+    });
+  }
+  mfaForm.addEventListener('submit',function(e){
+    e.preventDefault(); $('mfaErr').textContent='';
+    sb.auth.mfa.verify({factorId:pendingFactorId,challengeId:pendingChallengeId,code:$('mfaCode').value.trim()}).then(function(v){
+      if(v.error){$('mfaErr').textContent=v.error.message;return;}
+      mfaForm.style.display='none'; form.style.display='block'; verifyAdmin();
+    });
+  });
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    if(!sb){err.textContent='Backend not connected — see SUPABASE_SETUP.md.';return;}
+    err.style.color='var(--bad)';err.textContent='';
+    sb.auth.signInWithPassword({email:$('email').value.trim().toLowerCase(),password:$('password').value}).then(function(r){
+      if(r.error){err.textContent=r.error.message;return;} afterAuth();
+    });
+  });
+  $('signout').addEventListener('click',function(){ if(sb)sb.auth.signOut(); showLogin(); });
+  if(sb){ sb.auth.getSession().then(function(r){ if(r.data&&r.data.session) afterAuth(); }); }
+
+  // ---------- load + render customers ----------
+  function loadCustomers(){
+    $('clist').innerHTML='<div class="empty">Loading…</div>';
+    sb.from('profiles').select('*').order('created_at',{ascending:false}).then(function(r){
+      if(r.error){ $('clist').innerHTML='<div class="empty">'+esc(r.error.message)+'</div>'; return; }
+      customers=(r.data||[]).filter(function(c){return c.role!=='admin';});
+      renderMetrics(); renderList();
+    });
+  }
+  function renderMetrics(){
+    var active=customers.filter(function(c){return c.status==='active';});
+    var due=customers.filter(function(c){return c.status==='past_due';});
+    var mrr=active.reduce(function(s,c){return s+Number(c.monthly_price||0);},0);
+    $('tTotal').textContent=customers.length; $('tActive').textContent=active.length;
+    $('tDue').textContent=due.length; $('tMrr').textContent=money0(mrr);
+  }
+  function renderList(){
+    var q=($('search').value||'').toLowerCase().trim();
+    var rows=customers.filter(function(c){ return !q || (c.full_name||'').toLowerCase().indexOf(q)>=0 || (c.email||'').toLowerCase().indexOf(q)>=0; });
+    if(!rows.length){ $('clist').innerHTML='<div class="empty">'+(customers.length?'No matches.':'No customers yet. They appear here when people create an account in the portal.')+'</div>'; return; }
+    $('clist').innerHTML=rows.map(function(c){
+      return '<div class="crow" data-id="'+c.id+'"><div class="av"><span class="gold">'+initials(c.full_name,c.email)+'</span></div>'+
+        '<div class="ci"><div class="cn">'+esc(c.full_name||'(no name)')+'</div><div class="ce">'+esc(c.email||'')+'</div><span class="badge b-'+c.status+'">'+statusLabel(c.status)+'</span></div>'+
+        '<div class="cp"><div class="cpl">'+esc(c.plan)+'</div><div class="cpp">'+money(c.monthly_price)+'/mo</div></div></div>';
+    }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('.crow'),function(el){ el.addEventListener('click',function(){ openDetail(el.getAttribute('data-id')); }); });
+  }
+  $('search').addEventListener('input',renderList);
+  $('refresh').addEventListener('click',loadCustomers);
+
+  // ---------- customer detail ----------
+  var sheet=$('sheet');
+  function closeSheet(){ sheet.classList.remove('show'); }
+  sheet.addEventListener('click',function(e){ if(e.target===sheet) closeSheet(); });
+
+  function openDetail(id){
+    var c=customers.filter(function(x){return x.id===id;})[0]; if(!c)return;
+    var planPrice={Essential:19.99,Complete:29.99,Estate:49.99};
+    $('spanel').innerHTML=
+      '<div class="sh"><h3>'+esc(c.full_name||'Customer')+'</h3><span class="x" id="sx">&times;</span></div>'+
+      '<div class="ssub">'+esc(c.email||'')+'</div>'+
+
+      '<div class="block" style="border-top:none;margin-top:0;padding-top:0">'+
+        '<div class="bt2">Plan &amp; billing</div>'+
+        '<div class="row2"><div class="field"><label>Plan</label><select id="fPlan">'+
+          ['Essential','Complete','Estate'].map(function(p){return '<option '+(c.plan===p?'selected':'')+'>'+p+'</option>';}).join('')+
+        '</select></div><div class="field"><label>Price / mo</label><input type="number" step="0.01" id="fPrice" value="'+Number(c.monthly_price||0)+'"></div></div>'+
+        '<div class="row2"><div class="field"><label>Status</label><select id="fStatus">'+
+          ['pending','active','past_due','suspended','cancelled'].map(function(s){return '<option value="'+s+'" '+(c.status===s?'selected':'')+'>'+statusLabel(s)+'</option>';}).join('')+
+        '</select></div><div class="field"><label>Next due</label><input type="date" id="fDue" value="'+(c.next_due||'')+'"></div></div>'+
+        '<div class="row2"><div class="field"><label>Autopay</label><select id="fAuto"><option value="false" '+(!c.autopay?'selected':'')+'>Off</option><option value="true" '+(c.autopay?'selected':'')+'>On</option></select></div>'+
+        '<div class="field"><label>Card ••••</label><input type="text" id="fCard" maxlength="4" value="'+esc(c.card_last4||'')+'"></div></div>'+
+        '<div class="field"><label>Phone</label><input type="text" id="fPhone" value="'+esc(c.phone||'')+'"></div>'+
+        '<div class="savebar"><button class="btn btn-gold" id="saveBtn">Save changes</button></div>'+
+        '<div class="msg" id="saveMsg"></div>'+
+      '</div>'+
+
+      '<div class="block"><div class="bt2">Devices</div><div class="dlist" id="dlist"><div style="color:var(--muted2);font-size:13px">Loading…</div></div>'+
+        '<div class="row2"><div class="field" style="margin-bottom:0"><input type="text" id="devName" placeholder="Device name (e.g. Front door)"></div>'+
+        '<div class="field" style="margin-bottom:0"><button class="btn btn-ghost btn-sm" id="devAdd" style="width:100%">Add device</button></div></div>'+
+      '</div>'+
+
+      '<div class="block"><div class="bt2">Add invoice</div>'+
+        '<div class="row2"><div class="field"><label>Amount</label><input type="number" step="0.01" id="ivAmt" value="'+Number(c.monthly_price||0)+'"></div>'+
+        '<div class="field"><label>Status</label><select id="ivStatus"><option value="due">Due</option><option value="paid">Paid</option><option value="failed">Failed</option></select></div></div>'+
+        '<div class="field"><label>Period label</label><input type="text" id="ivPeriod" placeholder="e.g. Dec 2026"></div>'+
+        '<button class="btn btn-ghost btn-sm" id="ivAdd" style="width:100%">Add invoice</button><div class="msg" id="ivMsg"></div>'+
+      '</div>'+
+
+      '<div class="block"><button class="btn btn-ghost btn-sm danger" id="delBtn" style="width:100%">Delete customer</button><div class="msg" id="delMsg"></div></div>';
+
+    sheet.classList.add('show');
+    $('sx').addEventListener('click',closeSheet);
+    // auto-fill price when plan changes
+    $('fPlan').addEventListener('change',function(){ var pp=planPrice[$('fPlan').value]; if(pp!=null)$('fPrice').value=pp; });
+
+    // save profile
+    $('saveBtn').addEventListener('click',function(){
+      $('saveMsg').style.color='var(--muted)'; $('saveMsg').textContent='Saving…';
+      var upd={ plan:$('fPlan').value, monthly_price:parseFloat($('fPrice').value)||0, status:$('fStatus').value, next_due:$('fDue').value||null, autopay:$('fAuto').value==='true', card_last4:$('fCard').value.trim(), phone:$('fPhone').value.trim() };
+      sb.from('profiles').update(upd).eq('id',id).then(function(r){
+        if(r.error){ $('saveMsg').style.color='var(--bad)'; $('saveMsg').textContent=r.error.message; return; }
+        $('saveMsg').style.color='var(--good)'; $('saveMsg').textContent='Saved.';
+        Object.assign(c,upd); renderMetrics(); renderList();
+      });
+    });
+
+    // devices
+    function loadDevices(){
+      sb.from('devices').select('*').eq('user_id',id).order('created_at').then(function(r){
+        var ds=r.data||[];
+        $('dlist').innerHTML = ds.length? ds.map(function(d){
+          var col=d.status==='healthy'?'var(--good)':d.status==='offline'?'var(--muted)':'var(--bad)';
+          return '<div class="drow"><span class="ddot" style="background:'+col+'"></span><span class="dn">'+esc(d.name)+'</span><span class="x" data-del="'+d.id+'" style="font-size:18px">&times;</span></div>';
+        }).join('') : '<div style="color:var(--muted2);font-size:13px">No devices.</div>';
+        Array.prototype.forEach.call($('dlist').querySelectorAll('[data-del]'),function(x){ x.addEventListener('click',function(){ sb.from('devices').delete().eq('id',x.getAttribute('data-del')).then(loadDevices); }); });
+      });
+    }
+    loadDevices();
+    $('devAdd').addEventListener('click',function(){ var n=$('devName').value.trim(); if(!n)return; sb.from('devices').insert({user_id:id,name:n,status:'healthy',last_check:new Date().toISOString()}).then(function(){ $('devName').value=''; loadDevices(); }); });
+
+    // invoices
+    $('ivAdd').addEventListener('click',function(){
+      $('ivMsg').style.color='var(--muted)'; $('ivMsg').textContent='Adding…';
+      var inv={ user_id:id, amount:parseFloat($('ivAmt').value)||0, status:$('ivStatus').value, period:$('ivPeriod').value.trim(), issued_on:new Date().toISOString().slice(0,10) };
+      if(inv.status==='paid') inv.paid_on=inv.issued_on;
+      sb.from('invoices').insert(inv).then(function(r){ if(r.error){$('ivMsg').style.color='var(--bad)';$('ivMsg').textContent=r.error.message;return;} $('ivMsg').style.color='var(--good)';$('ivMsg').textContent='Invoice added.'; $('ivPeriod').value=''; });
+    });
+
+    // delete
+    $('delBtn').addEventListener('click',function(){
+      if($('delBtn').getAttribute('data-armed')!=='1'){ $('delBtn').setAttribute('data-armed','1'); $('delBtn').textContent='Tap again to confirm delete'; return; }
+      sb.from('profiles').delete().eq('id',id).then(function(r){ if(r.error){$('delMsg').style.color='var(--bad)';$('delMsg').textContent=r.error.message;return;} closeSheet(); loadCustomers(); });
+    });
+  }
+
+  // ---------- modal + admin 2FA ----------
+  var modal=$('modal'), mbox=$('mbox');
+  function openModal(){modal.classList.add('show');}
+  function closeModal(){modal.classList.remove('show');}
+  modal.addEventListener('click',function(e){if(e.target===modal)closeModal();});
+  $('secBtn').addEventListener('click',function(){
+    if(!sb)return; mbox.innerHTML='<div class="spin"></div>'; openModal();
+    sb.auth.mfa.listFactors().then(function(f){
+      if(f.data&&f.data.totp&&f.data.totp.length){
+        mbox.innerHTML='<div class="okmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="font-family:var(--display);font-size:22px;margin-bottom:6px">2FA is on</div><div style="font-size:13px;color:var(--muted2);margin-bottom:16px">Your admin account is protected.</div><button class="btn btn-ghost btn-sm" id="rm" style="width:100%">Turn off 2FA</button><div class="mlink" id="cl">Close</div>';
+        $('cl').addEventListener('click',closeModal); $('rm').addEventListener('click',function(){ sb.auth.mfa.unenroll({factorId:f.data.totp[0].id}).then(closeModal); }); return;
+      }
+      sb.auth.mfa.enroll({factorType:'totp',friendlyName:'Admin authenticator'}).then(function(en){
+        if(en.error){ mbox.innerHTML='<div style="font-size:13px">'+esc(en.error.message)+'</div><div class="mlink" id="cl">Close</div>'; $('cl').addEventListener('click',closeModal); return; }
+        var fid=en.data.id;
+        mbox.innerHTML='<div style="font-size:11.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted2);font-weight:700;margin-bottom:8px">Set up two-factor</div><p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">Scan with your authenticator app.</p><div style="background:#fff;border-radius:12px;padding:10px;display:inline-block;margin-bottom:10px">'+en.data.totp.qr_code+'</div><div style="font-size:11.5px;color:var(--muted2);word-break:break-all;margin-bottom:12px">Key: <b style="color:var(--ink)">'+en.data.totp.secret+'</b></div><div class="field"><input type="text" id="ec" inputmode="numeric" maxlength="6" placeholder="6-digit code"></div><button class="btn btn-gold" id="eg" style="width:100%">Verify &amp; turn on</button><div class="err" id="ee"></div><div class="mlink" id="cl">Cancel</div>';
+        $('cl').addEventListener('click',closeModal);
+        $('eg').addEventListener('click',function(){
+          $('ee').textContent=''; sb.auth.mfa.challenge({factorId:fid}).then(function(c){ if(c.error){$('ee').textContent=c.error.message;return;}
+            sb.auth.mfa.verify({factorId:fid,challengeId:c.data.id,code:$('ec').value.trim()}).then(function(v){ if(v.error){$('ee').textContent=v.error.message;return;} mbox.innerHTML='<div class="okmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="font-family:var(--display);font-size:24px;margin-bottom:6px">Two-factor on</div><button class="btn btn-gold" id="dn" style="width:100%">Done</button>'; $('dn').addEventListener('click',closeModal); });
+          });
+        });
+      });
+    });
+  });
+
+})();
+</script>
+</body>
+</html>
