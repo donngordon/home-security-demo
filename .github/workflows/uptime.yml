@@ -20,6 +20,7 @@ jobs:
             "https://donngordon.github.io/home-security-demo/"
             "https://donngordon.github.io/home-security-demo/app/"
             "https://donngordon.github.io/home-security-demo/portal/"
+            "https://donngordon.github.io/home-security-demo/admin/"
           )
           bad=""
           for u in "${urls[@]}"; do
