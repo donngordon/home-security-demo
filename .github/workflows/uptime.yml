@@ -1,0 +1,53 @@
+name: Uptime monitor
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping hosted site
+        id: ping
+        run: |
+          urls=(
+            "https://donngordon.github.io/home-security-demo/"
+            "https://donngordon.github.io/home-security-demo/app/"
+            "https://donngordon.github.io/home-security-demo/portal/"
+          )
+          bad=""
+          for u in "${urls[@]}"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 25 "$u" || echo 000)
+            echo "Checked $u -> $code"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then bad="$bad $u(HTTP $code)"; fi
+          done
+          echo "bad=$bad" >> "$GITHUB_OUTPUT"
+          if [ -n "$bad" ]; then echo "DOWN:$bad"; exit 1; fi
+          echo "All sites UP"
+      - name: Open an issue if down
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          existing=$(gh issue list --state open --search "Hosted site appears DOWN in:title" --json number -q 'length')
+          if [ "$existing" = "0" ]; then
+            gh issue create --title "⚠️ Hosted site appears DOWN" \
+              --body "The uptime monitor failed:${{ steps.ping.outputs.bad }}
+
+Check **Settings → Pages** and the live URLs. This issue will auto-close when the site is back up."
+          fi
+      - name: Close issue if back up
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh issue list --state open --search "Hosted site appears DOWN in:title" --json number -q '.[].number'); do
+            gh issue comment "$n" --body "✅ Back up — all sites responding."
+            gh issue close "$n"
+          done
