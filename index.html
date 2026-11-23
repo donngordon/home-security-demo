@@ -1503,6 +1503,9 @@ const Sky = (() => {
   let W = 0, H = 0, scene = null, stars = [], clouds = [], drops = [], flakes = [], motes = [], birds = [], planets = [];
   let nextFlock = 0, flash = 0, nextFlash = 0, shooting = null, nextShoot = 0, last = 0, raf = 0;
   let forest = [], fog = [], hawk = null, nextHawk = 0;
+  let rocket = null, nextRocket = 0, plane = null, nextPlane = 0;
+  let cycleOn = false, nextCycle = 0, cycleI = 0;
+  const CYCLE = ["night", "sun", "partly", "rain", "storm", "snow", "gloomy", "nightcloud"];
   const rnd = (a, b) => a + Math.random() * (b - a);
 
   function size() {
@@ -1626,8 +1629,55 @@ const Sky = (() => {
       s: rnd(6, 10), v: v * dir, p: rnd(0, 6.3), f: rnd(7, 10) });
     nextFlock = now + rnd(9000, 16000);
   }
+  function setScene(next) { document.body.setAttribute("data-sky", next); if (next === scene) return; scene = next; build(); }
+  // A rocket climbing into space on a plume of fire, leaving a glowing trail.
+  function spawnRocket(now) { rocket = { x: rnd(W * .30, W * .70), y: H * 1.05, v: 42, puffs: [], pt: 0 }; nextRocket = now + rnd(15000, 28000); }
+  function drawRocket(now, dt, t) {
+    const r = rocket; r.v += 30 * dt; r.y -= r.v * dt;
+    const climbed = H * 1.05 - r.y, sc = Math.max(.42, 1 - climbed / (H * 1.7)), fade = r.y < H * .10 ? Math.max(0, r.y / (H * .10)) : 1;
+    r.pt += dt; if (r.pt > .028) { r.pt = 0; r.puffs.push({ x: r.x + rnd(-3, 3), y: r.y + 20 * sc, r: 5 * sc, a: .5 * fade }); }
+    ctx.save(); ctx.globalCompositeOperation = "screen";
+    r.puffs.forEach((p) => { p.a -= .4 * dt; p.r += 14 * dt; const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      g.addColorStop(0, `rgba(255,205,145,${Math.max(0, p.a)})`); g.addColorStop(1, "rgba(255,170,110,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.3); ctx.fill(); });
+    ctx.restore(); r.puffs = r.puffs.filter((p) => p.a > .02);
+    ctx.save(); ctx.translate(r.x, r.y); ctx.scale(sc, sc); ctx.globalAlpha = fade;
+    const fl = 26 * (.75 + .35 * Math.sin(t * 45));
+    ctx.save(); ctx.globalCompositeOperation = "screen";
+    const fg = ctx.createRadialGradient(0, 16, 0, 0, 16 + fl * .4, fl);
+    fg.addColorStop(0, "rgba(255,255,255,.95)"); fg.addColorStop(.4, "rgba(255,210,120,.85)"); fg.addColorStop(1, "rgba(255,120,40,0)");
+    ctx.fillStyle = fg; ctx.beginPath(); ctx.moveTo(-6, 13); ctx.quadraticCurveTo(0, 16 + fl, 6, 13); ctx.quadraticCurveTo(0, 22, -6, 13); ctx.fill();
+    const gl = ctx.createRadialGradient(0, 2, 0, 0, 2, 36); gl.addColorStop(0, "rgba(255,220,160,.33)"); gl.addColorStop(1, "rgba(255,220,160,0)");
+    ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 2, 36, 0, 6.3); ctx.fill(); ctx.restore();
+    ctx.fillStyle = "#eef2f8"; ctx.beginPath(); ctx.moveTo(0, -22); ctx.quadraticCurveTo(7, -10, 7, 2); ctx.lineTo(7, 12); ctx.lineTo(-7, 12); ctx.lineTo(-7, 2); ctx.quadraticCurveTo(-7, -10, 0, -22); ctx.fill();
+    ctx.fillStyle = "#e0564a"; ctx.beginPath(); ctx.moveTo(0, -22); ctx.quadraticCurveTo(7, -10, 0, -6); ctx.quadraticCurveTo(-7, -10, 0, -22); ctx.fill();
+    ctx.fillStyle = "#7fb0e0"; ctx.beginPath(); ctx.arc(0, 1, 3, 0, 6.3); ctx.fill();
+    ctx.fillStyle = "#c94f44"; ctx.beginPath(); ctx.moveTo(-7, 4); ctx.lineTo(-13, 14); ctx.lineTo(-7, 12); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(7, 4); ctx.lineTo(13, 14); ctx.lineTo(7, 12); ctx.fill();
+    ctx.restore(); if (r.y < -60) rocket = null;
+  }
+  // A plane gliding across with a soft contrail and blinking nav lights.
+  function spawnPlane(now) { const dir = Math.random() < .5 ? 1 : -1; plane = { x: dir > 0 ? -70 : W + 70, y: rnd(H * .12, H * .34), v: rnd(42, 72) * dir, s: rnd(11, 16), trail: [] }; nextPlane = now + rnd(11000, 22000); }
+  function drawPlane(now, dt, t) {
+    const p = plane, dir = p.v > 0 ? 1 : -1, s = p.s; p.x += p.v * dt;
+    p.trail.push({ x: p.x - dir * s * 1.3, y: p.y, a: .22 }); if (p.trail.length > 64) p.trail.shift();
+    ctx.save(); ctx.globalCompositeOperation = "screen"; ctx.lineCap = "round"; ctx.lineWidth = 2.2;
+    for (let i = 1; i < p.trail.length; i++) { const a = p.trail[i], b = p.trail[i - 1]; a.a -= .12 * dt;
+      ctx.strokeStyle = `rgba(230,238,250,${Math.max(0, a.a)})`; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+    ctx.restore(); p.trail = p.trail.filter((q) => q.a > .01);
+    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(dir, 1); ctx.fillStyle = "rgba(20,26,38,.9)";
+    ctx.beginPath(); ctx.ellipse(0, 0, s * .9, s * .22, 0, 0, 6.3); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-s * .1, 0); ctx.lineTo(-s * .5, -s * .7); ctx.lineTo(-s * .1, -s * .1); ctx.lineTo(s * .3, 0); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-s * .1, 0); ctx.lineTo(-s * .5, s * .7); ctx.lineTo(-s * .1, s * .1); ctx.lineTo(s * .3, 0); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-s * .8, 0); ctx.lineTo(-s * 1.0, -s * .35); ctx.lineTo(-s * .7, -s * .05); ctx.fill();
+    ctx.restore();
+    const bl = Math.sin(t * 6) > 0;
+    ctx.fillStyle = `rgba(255,70,70,${bl ? .9 : .2})`; ctx.beginPath(); ctx.arc(p.x - dir * s * .9, p.y, 1.6, 0, 6.3); ctx.fill();
+    ctx.fillStyle = `rgba(120,255,140,${bl ? .2 : .9})`; ctx.beginPath(); ctx.arc(p.x + dir * s * .85, p.y, 1.6, 0, 6.3); ctx.fill();
+    if (p.x < -110 || p.x > W + 110) plane = null;
+  }
   function frame(now) {
     const dt = Math.min(.05, (now - (last || now)) / 1000); last = now;
+    if (cycleOn && now > nextCycle) { cycleI = (cycleI + 1) % CYCLE.length; setScene(CYCLE[cycleI]); nextCycle = now + 20000; }
     ctx.clearRect(0, 0, W, H);
     const t = now / 1000;
     // tint
@@ -1694,6 +1744,9 @@ const Sky = (() => {
     // soaring hawk, gliding across now and then
     if (!hawk && now > nextHawk) spawnHawk(now);
     if (hawk) { hawk.x += hawk.v * dt; hawk.y += Math.sin(t * .5 + hawk.p) * .15; drawHawk(t); if (hawk.x < -170 || hawk.x > W + 170) hawk = null; }
+    // rocket climbing to space (space scenes) and planes gliding across (any scene)
+    if (scene === "night" || scene === "nightcloud") { if (!rocket && now > nextRocket) spawnRocket(now); if (rocket) drawRocket(now, dt, t); }
+    if (!plane && now > nextPlane) spawnPlane(now); if (plane) drawPlane(now, dt, t);
     // rain
     if (drops.length) {
       ctx.strokeStyle = "rgba(190,210,240,.32)"; ctx.lineWidth = 1.1; ctx.beginPath();
@@ -1719,8 +1772,10 @@ const Sky = (() => {
   addEventListener("resize", () => { size(); build(); if (still) frame(performance.now()); });
   document.addEventListener("visibilitychange", () => { if (document.hidden) cancelAnimationFrame(raf); else start(); });
   size();
+  cycleOn = true; nextCycle = performance.now() + 18000;
   return {
-    set(cond, day) { const next = pick(cond, day); document.body.setAttribute("data-sky", next); if (next === scene) return; scene = next; build(); start(); },
+    set(cond, day) { const prev = scene; setScene(pick(cond, day)); if (scene !== prev) start(); },
+    cycle(on) { cycleOn = !!on; nextCycle = performance.now() + 18000; },
   };
 })();
 // Before sign-in: sunshine by day, stars at night.
