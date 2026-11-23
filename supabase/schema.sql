@@ -93,7 +93,10 @@ security definer
 set search_path = public
 as $$
 begin
-  if not public.is_admin() then
+  -- Only revert sensitive fields for a logged-in NON-admin customer.
+  -- auth.uid() is null for service-role / SQL-editor / server admin ops,
+  -- which must be allowed to promote the first admin and manage accounts.
+  if auth.uid() is not null and not public.is_admin() then
     new.role          := old.role;
     new.plan          := old.plan;
     new.monthly_price := old.monthly_price;
