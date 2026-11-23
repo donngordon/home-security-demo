@@ -1,5 +1,5 @@
 // Lets the demo open even without internet after the first visit.
-const CACHE = "home-security-demo-v22";
+const CACHE = "home-security-demo-v23";
 const FILES = ["./", "index.html", "security.webmanifest", "security-icon-192.png", "security-icon-512.png", "security-icon-180.png"];
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES))));
 // The page sends "skipWaiting" when the user taps the Update badge, so the new version activates on demand.
