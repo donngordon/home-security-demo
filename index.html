@@ -481,14 +481,19 @@
       <div class="gname">Gordon</div>
       <div class="gsub">PROTECTION</div>
     </div>
-    <p>Sign in to watch and control your home.</p>
+    <p id="authSub">Sign in to watch and control your home.</p>
     <form id="loginForm" autocomplete="off">
-      <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" aria-label="Username" autocapitalize="none" spellcheck="false">
+      <input id="fullName" name="name" type="text" placeholder="Full name" autocomplete="name" aria-label="Full name" autocapitalize="words" spellcheck="false" style="display:none">
+      <input id="username" name="username" type="email" placeholder="Email" autocomplete="username" aria-label="Email" autocapitalize="none" spellcheck="false">
       <input id="password" name="password" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password">
       <button class="cta" id="loginBtn" type="submit">Sign in</button>
     </form>
     <div id="loginMsg" role="status"></div>
-    <div class="demoaccts"><span>Demo logins — tap to fill:</span>
+    <div class="authlinks" style="margin-top:14px;font-size:14px">
+      <a id="toSignup" style="color:var(--porch);cursor:pointer">Create an account</a>
+      <span id="forgotWrap"> · <a id="toForgot" style="cursor:pointer;color:var(--haze)">Forgot password?</a></span>
+    </div>
+    <div class="demoaccts"><span>Or just explore the demo:</span>
       <button type="button" class="acct" data-acct="admin">Admin</button>
       <button type="button" class="acct" data-acct="member">Family</button>
       <button type="button" class="acct" data-acct="guest">Guest</button>
@@ -683,11 +688,6 @@
     <div class="demo">
       <p><b>Demo with sample data.</b> Nothing here controls a real home. Disarm code: 1234.</p>
       <span style="display:grid;gap:6px"><button id="simBtn">Try a break-in</button><button id="fireBtn">Try a kitchen fire</button><button id="leakBtn">Try a water leak</button></span>
-    </div>
-    <div class="wxdemo" role="group" aria-label="Preview the weather background">
-      <span>Preview weather:</span>
-      <button data-wx="sunny">Sunny</button><button data-wx="partlycloudy">Partly cloudy</button><button data-wx="cloudy">Gloomy</button>
-      <button data-wx="rainy">Rain</button><button data-wx="lightning-rainy">Storm</button><button data-wx="snowy">Snow</button><button data-wx="clear-night">Night</button>
     </div>
 
     <section class="block" id="nightBlock">
@@ -902,6 +902,12 @@
 
 <div id="toast" role="status" aria-live="polite"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  /* Real accounts — same Supabase project as the customer portal and admin console. */
+  window.GP_SUPABASE_URL      = "https://mnzgulwjcytwlypqcoul.supabase.co";
+  window.GP_SUPABASE_ANON_KEY = "sb_publishable_8GcABCOLGPJ6kJPJcFlY3A_HlMKeda3";
+</script>
 <script type="module">
 /* =====================================================================
    CONFIG: change these to match your Home Assistant entity IDs.
@@ -1108,20 +1114,75 @@ function applyRole() {
   document.body.setAttribute("data-role", userRole);
   ["manageUsers", "manageCodes"].forEach((id) => { const el = $(id); if (el) el.style.display = can("manage") ? "" : "none"; });
 }
-$("loginForm").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const u = ($("username").value || "").trim().toLowerCase(), p = $("password").value || "";
-  const a = ACCOUNTS[u];
-  if (!a || a.pw !== p) { $("loginMsg").textContent = "Wrong username or password."; return; }
+/* ---------------- real accounts via Supabase (same project as portal + admin) ---------------- */
+const sb = (window.GP_SUPABASE_URL && window.GP_SUPABASE_ANON_KEY && window.supabase)
+  ? window.supabase.createClient(window.GP_SUPABASE_URL, window.GP_SUPABASE_ANON_KEY) : null;
+let authMode = "signin";
+const roleFromProfile = (r) => (r === "admin" ? "admin" : "member");
+
+function enterAsDemo(a) {
   demoUser = { name: a.name, is_admin: a.role === "admin", role: a.role };
   $("loginMsg").textContent = ""; connect(true);
   if (window.__gpStartSession) window.__gpStartSession();
+}
+async function enterWithSupabaseSession() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return;
+  let role = "member", nm = user.email;
+  try {
+    const { data: p } = await sb.from("profiles").select("full_name,role").eq("id", user.id).single();
+    if (p) { role = roleFromProfile(p.role); if (p.full_name) nm = p.full_name; }
+  } catch (e) {}
+  demoUser = { name: nm, is_admin: role === "admin", role };
+  $("loginMsg").textContent = ""; connect(true);
+  if (window.__gpStartSession) window.__gpStartSession();
+}
+function setAuthMode(m) {
+  authMode = m; $("loginMsg").textContent = "";
+  $("fullName").style.display = (m === "signup") ? "" : "none";
+  $("password").style.display = (m === "forgot") ? "none" : "";
+  $("authSub").textContent = m === "signup" ? "Create your account to watch and control your home."
+    : m === "forgot" ? "We’ll email you a reset link." : "Sign in to watch and control your home.";
+  $("loginBtn").textContent = m === "signup" ? "Create account" : m === "forgot" ? "Send reset link" : "Sign in";
+  $("toSignup").textContent = m === "signin" ? "Create an account" : "Back to sign in";
+  $("forgotWrap").style.display = (m === "signin") ? "" : "none";
+}
+$("toSignup").onclick = () => setAuthMode(authMode === "signin" ? "signup" : "signin");
+$("toForgot").onclick = () => setAuthMode("forgot");
+
+$("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = ($("username").value || "").trim().toLowerCase();
+  const pw = $("password").value || "", nm = ($("fullName").value || "").trim();
+  const msg = $("loginMsg");
+  if (!sb) { msg.textContent = "Accounts aren’t connected yet."; return; }
+  msg.textContent = "Working…";
+  try {
+    if (authMode === "forgot") {
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.href });
+      msg.textContent = error ? error.message : "Check your email for a reset link."; return;
+    }
+    if (authMode === "signup") {
+      const { data, error } = await sb.auth.signUp({ email, password: pw, options: { data: { full_name: nm } } });
+      if (error) { msg.textContent = error.message; return; }
+      if (data.session) { await enterWithSupabaseSession(); }
+      else { msg.textContent = "Account created. If asked, confirm via the email we sent, then sign in."; setAuthMode("signin"); }
+      return;
+    }
+    const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (error) { msg.textContent = error.message; return; }
+    await enterWithSupabaseSession();
+  } catch (err) { msg.textContent = "Something went wrong. Please try again."; }
 });
+
+/* demo buttons: explore the app without an account */
 document.querySelectorAll(".demoaccts .acct").forEach((b) => b.onclick = () => {
-  const a = ACCOUNTS[b.dataset.acct]; if (!a) return;
-  $("username").value = b.dataset.acct; $("password").value = a.pw; $("loginMsg").textContent = "";
+  const a = ACCOUNTS[b.dataset.acct]; if (a) enterAsDemo(a);
 });
-$("logoutBtn").onclick = () => { if (window.__gpStopSession) window.__gpStopSession(); store.save(null); location.reload(); };
+
+/* resume an existing real session on load */
+if (sb) { sb.auth.getSession().then(({ data }) => { if (data && data.session) enterWithSupabaseSession(); }); }
+$("logoutBtn").onclick = () => { if (window.__gpStopSession) window.__gpStopSession(); try { if (sb) sb.auth.signOut(); } catch (e) {} store.save(null); location.reload(); };
 
 /* ---------- NIST SP 800-63B session timeout (idle + absolute) ----------
    AAL2-aligned: 15-min inactivity (NIST max 30), 1-min warning, 12-h cap.
