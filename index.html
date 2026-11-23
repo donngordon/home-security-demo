@@ -1786,7 +1786,7 @@ const Sky = (() => {
   addEventListener("resize", () => { size(); build(); if (still) frame(performance.now()); });
   document.addEventListener("visibilitychange", () => { if (document.hidden) cancelAnimationFrame(raf); else start(); });
   size();
-  cycleOn = true; nextCycle = performance.now() + 18000;
+  cycleOn = false;   // the sky follows the REAL weather — no fake rain/snow; only day/night, rocket and planes vary
   return {
     set(cond, day) { const prev = scene; setScene(pick(cond, day)); if (scene !== prev) start(); },
     cycle(on) { cycleOn = !!on; nextCycle = performance.now() + 18000; },
