@@ -63,6 +63,14 @@
   /* ---------------- top bar ---------------- */
   .top { display: flex; justify-content: space-between; align-items: center; padding: 10px 0 4px; }
   .top .hello { font-size: 15px; color: var(--haze); }
+  .topright { display: flex; align-items: center; gap: 10px; }
+  .updatebtn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px 8px 11px; border-radius: 999px; border: none; cursor: pointer;
+    font: 700 13px var(--ui); color: #2a1e06; background: linear-gradient(180deg, #f7e3b4, #e6ba6a 55%, #c7983f);
+    box-shadow: 0 6px 18px -8px rgba(230,186,106,.7); animation: updpulse 2.2s ease-in-out infinite; }
+  .updatebtn svg { width: 16px; height: 16px; }
+  .updatebtn:hover { transform: translateY(-1px); }
+  .updatebtn.busy { opacity: .55; pointer-events: none; animation: none; }
+  @keyframes updpulse { 0%, 100% { box-shadow: 0 6px 18px -8px rgba(230,186,106,.6); } 50% { box-shadow: 0 7px 28px -6px rgba(230,186,106,1); } }
   .top .hello b { color: var(--paper); font-weight: 600; }
   .ghost { padding: 8px 12px; border-radius: 99px; color: var(--haze); font-size: 14px; }
   .ghost:hover { color: var(--paper); background: rgba(255,255,255,.06); }
@@ -504,9 +512,15 @@
   <section id="app" class="hidden">
     <div class="top">
       <div class="hello" id="who"></div>
-      <button class="gear" id="openSettings" aria-label="Settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-      </button>
+      <div class="topright">
+        <button class="updatebtn" id="updateBtn" type="button" aria-label="A new version is available — tap to update" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          <span>Update</span>
+        </button>
+        <button class="gear" id="openSettings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
+      </div>
     </div>
 
     <section class="fire" id="fireBox" role="alert">
@@ -2243,7 +2257,25 @@ $("fireBtn").onclick = () => { window.__simulateFire(); window.scrollTo({ top: 0
 document.querySelectorAll("[data-wx]").forEach((b) => b.onclick = () => window.__setWeather(b.dataset.wx));
 </script>
 <script>
-  if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  if ("serviceWorker" in navigator) addEventListener("load", async () => {
+    function showUpdate(worker) {
+      const b = $("updateBtn"); if (!b || !worker) return;
+      b.style.display = "inline-flex";
+      b.onclick = () => { b.classList.add("busy"); const s = b.querySelector("span"); if (s) s.textContent = "Updating"; worker.postMessage("skipWaiting"); };
+    }
+    try {
+      const reg = await navigator.serviceWorker.register("sw.js");
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdate(reg.waiting);
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing; if (!nw) return;
+        nw.addEventListener("statechange", () => { if (nw.state === "installed" && navigator.serviceWorker.controller) showUpdate(nw); });
+      });
+      setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) reg.update().catch(() => {}); });
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => { if (reloaded) return; reloaded = true; location.reload(); });
+    } catch (e) {}
+  });
 </script>
 </body>
 </html>
